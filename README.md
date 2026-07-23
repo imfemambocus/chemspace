@@ -34,9 +34,9 @@ core group's monthly idea-sharing meeting, one small increment at a time.
 - **The numbers that matter.** A side panel lists the formula, mass, XLogP, SMILES, InChI, and the
   rest, with a link back out to the compound's PubChem page.
 - **A property radar.** Instead of a plain table, the computed descriptors (molecular weight,
-  XLogP, TPSA, H-bond donors and acceptors, rotatable bonds) are drawn as a ring of bars, each
-  normalized to a typical small-molecule range. The value list underneath doubles as the accessible
-  table view.
+  XLogP, TPSA, H-bond donors and acceptors, rotatable bonds) are drawn as a spider chart: a
+  translucent area whose reach on each axis is the value, normalized to a typical small-molecule
+  range. The value list underneath doubles as the accessible table view.
 - **Small touches.** A first-load splash where a molecule assembles and tumbles, a camera that
   frames each new structure automatically, ambient occlusion and a soft bloom so the model reads
   with real depth, and animation that leans on GSAP so it feels designed rather than bolted on.
@@ -85,10 +85,10 @@ or a CORS-friendly data host.
 ## Tech
 
 React + TypeScript on Vite, [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and
-[drei](https://github.com/pmndrs/drei) for the Three.js scenes,
+[drei](https://github.com/pmndrs/drei) for the 3D structure scene,
 [postprocessing](https://github.com/pmndrs/react-postprocessing) for the ambient occlusion and
 bloom, [GSAP](https://gsap.com/) for animation, [Zustand](https://github.com/pmndrs/zustand) for
-state, and Tailwind for the UI around the canvas.
+state, and Tailwind for the UI around the canvas. The property radar is plain SVG, no WebGL.
 
 ## Where it's going
 
@@ -96,7 +96,6 @@ The focus now is speed. ChemSpace is deliberately a single page, the compound pa
 by searching. Text lands on screen immediately, the 3D streams in behind it, and an idle molecule
 costs almost nothing: that part is already in place. Next up:
 
-- A lighter, SVG property radar in place of the second WebGL canvas
 - A 2D depiction toggle, and quick druglikeness flags (Lipinski, Veber, QED)
 
 Deliberately out of scope, to keep it fast and light: proteins, molecular surfaces, and multi-

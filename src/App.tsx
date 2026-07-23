@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { fetchMolecule, type Molecule } from './data/molecule'
 import { fetchProperties, type Properties } from './data/properties'
 import { Loader } from './components/Loader'
@@ -66,6 +66,10 @@ export default function App() {
   const [props, setProps] = useState<Properties | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
+  // Flips once the first-load splash clears, so the Profile radar holds its grow-in until
+  // it is actually visible. Stable callback so Loader doesn't re-signal on every render.
+  const [splashDone, setSplashDone] = useState(false)
+  const onSplashDone = useCallback(() => setSplashDone(true), [])
 
   useEffect(() => {
     // One controller both cancels the in-flight requests when the CID changes (a new
@@ -105,7 +109,7 @@ export default function App() {
 
   return (
     <div className="min-h-full">
-      <Loader />
+      <Loader onDone={onSplashDone} />
       <Header cid={cid} onLoadCid={setCid} />
 
       <main className="mx-auto max-w-6xl px-6 py-10">
@@ -146,7 +150,7 @@ export default function App() {
               </Suspense>
             </div>
 
-            <ProfileSection props={props} loading={loading} />
+            <ProfileSection props={props} loading={loading} splashDone={splashDone} />
           </>
         )}
       </main>
