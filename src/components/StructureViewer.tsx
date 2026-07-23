@@ -1,17 +1,37 @@
+import { useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import type { Molecule } from '../data/molecule'
 import { cpkColor } from '../data/elements'
 import { Scene } from '../three/Scene'
 import { measure } from '../three/measure'
 import { ViewerHint } from './ViewerHint'
+import { LogoMark } from './LogoMark'
 import { useStore } from '../store'
 
 interface Props {
   molecule: Molecule | null
   loading: boolean
+  cid: number
 }
 
-export function StructureViewer({ molecule, loading }: Readonly<Props>) {
+// Which structure representation is showing: the interactive 3D model, or PubChem's flat 2D
+// depiction (a plain PNG). 2D needs only the CID, so it works even for compounds with no 3D
+// conformer, where we would otherwise be worse than PubChemLite's own 2D drawing.
+type View = '3d' | '2d'
+
+// Hold the assembling logo up for at least this long so its full animation plays before the
+// 2D image replaces it, even when the image is cached (skipped under reduced motion).
+const MIN_2D_LOADER_MS = 900
+
+export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
+  const [view, setView] = useState<View>('3d')
+  // the CID whose 2D image is showing; while it lags behind `cid` the logo mark spins
+  const [loadedCid, setLoadedCid] = useState<number | null>(null)
+  const loadStart = useRef(0)
+  const loaderTimer = useRef<number | null>(null)
+  // CIDs whose 2D image has already been fetched this session, so toggling back does not replay
+  // the loader for an image that is now cached
+  const loadedOnce = useRef<Set<number>>(new Set())
   const style = useStore((s) => s.style)
   const setStyle = useStore((s) => s.setStyle)
   const spin = useStore((s) => s.spin)
@@ -24,45 +44,91 @@ export function StructureViewer({ molecule, loading }: Readonly<Props>) {
   // The live measurement doubles as the accessible, non-3D readout of the picked atoms.
   const result = molecule && selection.length >= 2 ? measure(molecule.atoms, selection) : null
 
+  // When the 2D image to show changes, replay the loader only for an image not fetched yet;
+  // an already-fetched (cached) one shows straight away.
+  useEffect(() => {
+    if (view !== '2d') return
+    if (loadedOnce.current.has(cid)) {
+      setLoadedCid(cid)
+      return
+    }
+    loadStart.current = Date.now()
+    setLoadedCid(null)
+    return () => {
+      if (loaderTimer.current != null) clearTimeout(loaderTimer.current)
+    }
+  }, [cid, view])
+
+  // Reveal the 2D image once it has decoded, but not before the loader's minimum has elapsed.
+  // A cached image (already seen this session) skips the wait entirely.
+  const revealImage = () => {
+    if (loadedOnce.current.has(cid)) {
+      setLoadedCid(cid)
+      return
+    }
+    loadedOnce.current.add(cid)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const min = reduce ? 0 : MIN_2D_LOADER_MS
+    const wait = Math.max(0, min - (Date.now() - loadStart.current))
+    loaderTimer.current = window.setTimeout(() => setLoadedCid(cid), wait)
+  }
+
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
-        <span className="text-xs uppercase tracking-wider text-neutral-500">3D structure</span>
+        <span className="text-xs uppercase tracking-wider text-neutral-500">Structure</span>
         <div className="flex items-center gap-2">
-          {molecule && !molecule.is3D && (
-            <span className="rounded border border-amber-400/30 px-1.5 py-0.5 text-[10px] text-amber-300/90">
-              2D layout
-            </span>
+          {/* Ball&stick / space-filling, measure and spin only apply to the 3D model. The
+              3D/2D toggle sits last so it stays pinned to the right edge and does not shift
+              when these 3D-only controls appear or disappear. */}
+          {view === '3d' && (
+            <>
+              {molecule && !molecule.is3D && (
+                <span className="rounded border border-amber-400/30 px-1.5 py-0.5 text-[10px] text-amber-300/90">
+                  2D layout
+                </span>
+              )}
+              <Segmented
+                options={[
+                  { value: 'ballstick', label: 'Ball & stick' },
+                  { value: 'spacefill', label: 'Space-filling' },
+                ]}
+                value={style}
+                onChange={(v) => setStyle(v as typeof style)}
+              />
+              <button
+                onClick={toggleMeasure}
+                className={`rounded-md border px-2.5 py-1 text-xs transition ${
+                  measuring
+                    ? 'border-accent/40 bg-accent/10 text-accent'
+                    : 'border-white/10 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+                }`}
+              >
+                Measure
+              </button>
+              <button
+                onClick={toggleSpin}
+                className={`rounded-md border px-2.5 py-1 text-xs transition ${
+                  spin
+                    ? 'border-accent/40 bg-accent/10 text-accent'
+                    : 'border-white/10 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+                }`}
+              >
+                Spin
+              </button>
+              {/* divider between the 3D-only controls and the 3D/2D toggle */}
+              <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
+            </>
           )}
           <Segmented
             options={[
-              { value: 'ballstick', label: 'Ball & stick' },
-              { value: 'spacefill', label: 'Space-filling' },
+              { value: '3d', label: '3D' },
+              { value: '2d', label: '2D' },
             ]}
-            value={style}
-            onChange={(v) => setStyle(v as typeof style)}
+            value={view}
+            onChange={(v) => setView(v as View)}
           />
-          <button
-            onClick={toggleMeasure}
-            className={`rounded-md border px-2.5 py-1 text-xs transition ${
-              measuring
-                ? 'border-accent/40 bg-accent/10 text-accent'
-                : 'border-white/10 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
-            }`}
-          >
-            Measure
-          </button>
-          <button
-            onClick={toggleSpin}
-            className={`rounded-md border px-2.5 py-1 text-xs transition ${
-              spin
-                ? 'border-accent/40 bg-accent/10 text-accent'
-                : 'border-white/10 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
-            }`}
-          >
-            Spin
-          </button>
         </div>
       </div>
 
@@ -71,72 +137,98 @@ export function StructureViewer({ molecule, loading }: Readonly<Props>) {
         className="relative flex-1 min-h-75 sm:min-h-105 lg:min-h-120"
         style={{ background: 'radial-gradient(circle at 50% 35%, #151515, #0a0a0a 70%)' }}
       >
-        {/* Absolutely positioned so the canvas never feeds its rendered height back into
-            the flex/grid sizing; the container height stays driven by content and resets
-            per compound instead of sticking at the tallest one seen. */}
-        <Canvas
-          // On-demand rendering: an idle molecule costs ~0 GPU/CPU. Everything that changes
-          // per frame requests one explicitly (spin driver, GSAP onUpdate, instance writes);
-          // drag/zoom and hover/measure overlays already invalidate via drei/the reconciler.
-          frameloop="demand"
-          camera={{ position: [0, 0, 30], fov: 45, near: 0.1, far: 1000 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: true }}
-          style={{ position: 'absolute', inset: 0 }}
-          onPointerMissed={clearSelection}
-        >
-          <Scene molecule={molecule} />
-        </Canvas>
-
-        {/* Measurement readout: the live value, and the accessible view of what's picked. */}
-        {molecule && !loading && measuring && (
-          <div className="absolute left-3 top-3 max-w-60 rounded-lg border border-white/10 bg-neutral-900/85 px-3 py-2 text-xs backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <span className="uppercase tracking-wider text-neutral-500">Measure</span>
-              <button
-                onClick={clearSelection}
-                disabled={!selection.length}
-                className="text-neutral-400 transition hover:text-neutral-100 disabled:opacity-40"
-              >
-                Clear
-              </button>
-            </div>
-            {result ? (
-              <div className="mt-1.5">
-                <span className="identifier text-neutral-400">{result.label}</span>
-                <span className="ml-2 font-medium text-accent">{result.text}</span>
+        {view === '2d' ? (
+          // Plain PNG from PubChem's depiction endpoint, on a light card so the white-
+          // background drawing reads as a sheet against the dark canvas. Needs only the CID.
+          // The spinning logo mark holds the space until the image decodes, then it fades in.
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+            {loadedCid !== cid && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <LogoMark size={72} />
               </div>
-            ) : (
-              <p className="mt-1.5 leading-relaxed text-neutral-500">
-                Click atoms: two for a distance, three for an angle, four for a torsion.
-              </p>
             )}
+            <img
+              key={cid}
+              src={`/pubchem/rest/pug/compound/cid/${cid}/PNG?image_size=large`}
+              alt={`2D structural depiction of CID ${cid}`}
+              onLoad={revealImage}
+              onError={revealImage}
+              className={`max-h-full max-w-full rounded-lg bg-white p-3 shadow-xl transition-opacity duration-300 ${
+                loadedCid === cid ? 'opacity-100' : 'opacity-0'
+              }`}
+              loading="lazy"
+            />
           </div>
-        )}
+        ) : (
+          <>
+            {/* Absolutely positioned so the canvas never feeds its rendered height back into
+                the flex/grid sizing; the container height stays driven by content and resets
+                per compound instead of sticking at the tallest one seen. */}
+            <Canvas
+              // On-demand rendering: an idle molecule costs ~0 GPU/CPU. Everything that changes
+              // per frame requests one explicitly (spin driver, GSAP onUpdate, instance writes);
+              // drag/zoom and hover/measure overlays already invalidate via drei/the reconciler.
+              frameloop="demand"
+              camera={{ position: [0, 0, 30], fov: 45, near: 0.1, far: 1000 }}
+              dpr={[1, 2]}
+              gl={{ antialias: true, alpha: true }}
+              style={{ position: 'absolute', inset: 0 }}
+              onPointerMissed={clearSelection}
+            >
+              <Scene molecule={molecule} />
+            </Canvas>
 
-        {loading && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="animate-pulse text-sm text-neutral-500">Loading structure…</span>
-          </div>
-        )}
+            {/* Measurement readout: the live value, and the accessible view of what's picked. */}
+            {molecule && !loading && measuring && (
+              <div className="absolute left-3 top-3 max-w-60 rounded-lg border border-white/10 bg-neutral-900/85 px-3 py-2 text-xs backdrop-blur">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="uppercase tracking-wider text-neutral-500">Measure</span>
+                  <button
+                    onClick={clearSelection}
+                    disabled={!selection.length}
+                    className="text-neutral-400 transition hover:text-neutral-100 disabled:opacity-40"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {result ? (
+                  <div className="mt-1.5">
+                    <span className="identifier text-neutral-400">{result.label}</span>
+                    <span className="ml-2 font-medium text-accent">{result.text}</span>
+                  </div>
+                ) : (
+                  <p className="mt-1.5 leading-relaxed text-neutral-500">
+                    Click atoms: two for a distance, three for an angle, four for a torsion.
+                  </p>
+                )}
+              </div>
+            )}
 
-        {/* Element legend */}
-        {molecule && !loading && (
-          <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1">
-            {uniqueElements(molecule).map(({ el, count }) => (
-              <span key={el} className="flex items-center gap-1.5 text-xs text-neutral-400">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white/15"
-                  style={{ background: cpkColor(el) }}
-                />
-                {el}
-                <span className="text-neutral-600">{count}</span>
-              </span>
-            ))}
-          </div>
-        )}
+            {loading && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <span className="animate-pulse text-sm text-neutral-500">Loading structure…</span>
+              </div>
+            )}
 
-        {molecule && !loading && <ViewerHint />}
+            {/* Element legend */}
+            {molecule && !loading && (
+              <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1">
+                {uniqueElements(molecule).map(({ el, count }) => (
+                  <span key={el} className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white/15"
+                      style={{ background: cpkColor(el) }}
+                    />
+                    {el}
+                    <span className="text-neutral-600">{count}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {molecule && !loading && <ViewerHint />}
+          </>
+        )}
       </div>
     </div>
   )
