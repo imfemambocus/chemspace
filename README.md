@@ -4,7 +4,6 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-2dd4bf?style=flat-square&labelColor=0a0a0a&logo=react&logoColor=2dd4bf" alt="React 19">
-  <img src="https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&labelColor=0a0a0a&logo=typescript&logoColor=2dd4bf" alt="TypeScript">
   <img src="https://img.shields.io/badge/three.js-r185-2dd4bf?style=flat-square&labelColor=0a0a0a&logo=three.js&logoColor=2dd4bf" alt="three.js">
   <img src="https://img.shields.io/badge/Vite-8-2dd4bf?style=flat-square&labelColor=0a0a0a&logo=vite&logoColor=2dd4bf" alt="Vite">
 </p>
