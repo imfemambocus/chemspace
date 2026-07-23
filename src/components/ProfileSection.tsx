@@ -1,16 +1,14 @@
-import { lazy, Suspense } from 'react'
 import type { Properties } from '../data/properties'
 import { descriptors } from '../data/properties'
+import { PropertyRadar } from './PropertyRadar'
 
-// The radar canvas carries three.js, so load it on demand: the value list below paints
-// from the entry chunk while this streams in.
-const RadarCanvas = lazy(() =>
-  import('./RadarCanvas').then((m) => ({ default: m.RadarCanvas })),
-)
-
-// The "Profile" section: a 3D radial bar chart of computed descriptors, paired with a
+// The "Profile" section: an SVG radial bar chart of computed descriptors, paired with a
 // value list that doubles as the accessible table view.
-export function ProfileSection({ props, loading }: Readonly<{ props: Properties | null; loading: boolean }>) {
+export function ProfileSection({
+  props,
+  loading,
+  splashDone,
+}: Readonly<{ props: Properties | null; loading: boolean; splashDone: boolean }>) {
   const data = props ? descriptors(props) : []
 
   return (
@@ -27,9 +25,7 @@ export function ProfileSection({ props, loading }: Readonly<{ props: Properties 
           style={{ background: 'radial-gradient(circle at 50% 60%, #141414, #0a0a0a 70%)' }}
         >
           {props && !loading ? (
-            <Suspense fallback={<RadarFallback label="Loading chart…" />}>
-              <RadarCanvas data={data} />
-            </Suspense>
+            <PropertyRadar descriptors={data} play={splashDone} />
           ) : (
             <RadarFallback label={loading ? 'Loading descriptors…' : 'Descriptors unavailable'} />
           )}
@@ -50,7 +46,9 @@ export function ProfileSection({ props, loading }: Readonly<{ props: Properties 
                 <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
                   <div
                     className="h-full rounded-full bg-accent transition-[width] duration-500"
-                    style={{ width: `${Math.round(d.norm * 100)}%` }}
+                    // hold at zero until the splash clears so the fill isn't seen animating
+                    // behind the fading overlay; then it grows in with the radar
+                    style={{ width: splashDone ? `${Math.round(d.norm * 100)}%` : '0%' }}
                   />
                 </div>
               </div>

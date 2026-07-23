@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 
 // First-load splash: a molecule assembles and tumbles in the center, then the overlay
-// fades out and unmounts. Plays once on mount; App never remounts it, so it does not
-// reappear on later CID changes.
-export function Loader() {
+// fades out and unmounts. Plays once per page load, so a manual reload shows it again, but
+// never on in-page fetches: App mounts it once and never remounts it, so switching
+// compounds does not replay it. `onDone` fires when it clears, so the page can hold its
+// entrance animations until the splash is out of the way.
+export function Loader({ onDone }: Readonly<{ onDone?: () => void }>) {
   const [leaving, setLeaving] = useState(false)
   const [hidden, setHidden] = useState(false)
 
@@ -18,6 +20,10 @@ export function Loader() {
       clearTimeout(forceHide)
     }
   }, [])
+
+  useEffect(() => {
+    if (hidden) onDone?.()
+  }, [hidden, onDone])
 
   if (hidden) return null
 
