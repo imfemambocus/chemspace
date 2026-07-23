@@ -14,6 +14,15 @@ import { useStore } from '../store'
 const ACCENT = '#2dd4bf'
 const Y = new THREE.Vector3(0, 1, 0)
 
+// Sphere tessellation for the atom instances, dialed down as the atom count climbs. Small
+// molecules stay crisp; busy ones trade a little smoothness for far fewer vertices. It is one
+// draw call either way, but the vertex/fragment cost still scales with segments squared.
+function atomSegments(atomCount: number): number {
+  if (atomCount <= 40) return 24
+  if (atomCount <= 120) return 16
+  return 12
+}
+
 // A picked object under the pointer: an atom by its index, or a bond by its index.
 type Hover = { kind: 'atom'; index: number } | { kind: 'bond'; index: number } | null
 
@@ -63,6 +72,9 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
   const invalidate = useThree((s) => s.invalidate)
 
   const bondInstances = useMemo(() => buildBondInstances(molecule), [molecule])
+
+  // recreated only on molecule change; args changes rebuild the sphere geometry
+  const segments = useMemo(() => atomSegments(molecule.atoms.length), [molecule])
 
   // atom radius for the current render style, reused by the highlight overlays
   const atomRadius = (el: string) => (style === 'spacefill' ? vdwRadius(el) : ballRadius(el))
@@ -203,7 +215,7 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
         onPointerOut={onAtomOut}
         onClick={onAtomClick}
       >
-        <sphereGeometry args={[1, 24, 24]} />
+        <sphereGeometry args={[1, segments, segments]} />
         <meshStandardMaterial roughness={0.35} metalness={0.1} />
       </instancedMesh>
 

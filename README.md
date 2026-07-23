@@ -22,7 +22,8 @@ core group's monthly idea-sharing meeting, one small increment at a time.
 
 - **Real 3D structures, not flat diagrams.** Most compound pages show you a 2D sketch. ChemSpace
   pulls the actual 3D conformer and renders it as CPK-colored atoms and bonds you can look at from
-  any angle.
+  any angle. For the few compounds with no 3D conformer, a `3D / 2D` toggle drops back to PubChem's
+  flat depiction, so you are never worse off than a plain 2D page.
 - **Search however you think of it.** Type a compound name, a SMILES string, or a bare PubChem CID;
   it resolves to the right compound. Every molecule also has a shareable link (`?cid=2519`) that
   opens straight to it.
@@ -33,10 +34,12 @@ core group's monthly idea-sharing meeting, one small increment at a time.
   the real coordinates.
 - **The numbers that matter.** A side panel lists the formula, mass, XLogP, SMILES, InChI, and the
   rest, with a link back out to the compound's PubChem page.
-- **A property radar.** Instead of a plain table, the computed descriptors (molecular weight,
-  XLogP, TPSA, H-bond donors and acceptors, rotatable bonds) are drawn as a spider chart: a
-  translucent area whose reach on each axis is the value, normalized to a typical small-molecule
-  range. The value list underneath doubles as the accessible table view.
+- **A property radar, plus druglikeness.** The computed descriptors (molecular weight, XLogP, TPSA,
+  H-bond donors and acceptors, rotatable bonds) are drawn as a spider chart whose reach on each
+  axis is the value, normalized to a typical small-molecule range, with a value list beside it that
+  doubles as the accessible table view. The same Profile section reads those numbers into
+  druglikeness: Lipinski and Veber rule checks and an approximate QED score, all worked out in the
+  browser from data already fetched.
 - **Small touches.** A first-load splash where a molecule assembles and tumbles, a camera that
   frames each new structure automatically, ambient occlusion and a soft bloom so the model reads
   with real depth, and animation that leans on GSAP so it feels designed rather than bolted on.
@@ -94,9 +97,9 @@ state, and Tailwind for the UI around the canvas. The property radar is plain SV
 
 The focus now is speed. ChemSpace is deliberately a single page, the compound page, that you reach
 by searching. Text lands on screen immediately, the 3D streams in behind it, and an idle molecule
-costs almost nothing: that part is already in place. Next up:
-
-- A 2D depiction toggle, and quick druglikeness flags (Lipinski, Veber, QED)
+costs almost nothing. The 2D depiction toggle and the client-side druglikeness flags (Lipinski,
+Veber, QED) are in place too. Next up is mostly keeping the bundle honest: wiring up bundle-size
+analysis to confirm the heavy 3D really is out of the initial load.
 
 Deliberately out of scope, to keep it fast and light: proteins, molecular surfaces, and multi-
 molecule comparison. This is a fast viewer for one small molecule at a time, not a data platform.

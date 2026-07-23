@@ -31,7 +31,7 @@ function ViewerFallback() {
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
       <div className="flex items-center border-b border-white/10 px-4 py-2.5">
-        <span className="text-xs uppercase tracking-wider text-neutral-500">3D structure</span>
+        <span className="text-xs uppercase tracking-wider text-neutral-500">Structure</span>
       </div>
       <div
         className="relative flex-1 min-h-75 sm:min-h-105 lg:min-h-120"
@@ -146,7 +146,7 @@ export default function App() {
             <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
               <StructuralInfo props={props} loading={loading} />
               <Suspense fallback={<ViewerFallback />}>
-                <StructureViewer molecule={status === 'ready' ? molecule : null} loading={loading} />
+                <StructureViewer molecule={status === 'ready' ? molecule : null} loading={loading} cid={cid} />
               </Suspense>
             </div>
 
