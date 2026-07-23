@@ -60,6 +60,7 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
   const controls = useThree((s) => s.controls) as unknown as OrbitControlsImpl | null
   const gl = useThree((s) => s.gl)
+  const invalidate = useThree((s) => s.invalidate)
 
   const bondInstances = useMemo(() => buildBondInstances(molecule), [molecule])
 
@@ -111,7 +112,10 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     bondsRef.current.count = style === 'spacefill' ? 0 : bondInstances.length
     bondsRef.current.instanceMatrix.needsUpdate = true
     if (bondsRef.current.instanceColor) bondsRef.current.instanceColor.needsUpdate = true
-  }, [molecule, style, bondInstances])
+    // These imperative buffer writes bypass the reconciler, so request a frame ourselves
+    // for the molecule swap and the ball-and-stick / space-filling toggle to repaint.
+    invalidate()
+  }, [molecule, style, bondInstances, invalidate])
 
   // Scale-in reveal, once per molecule. Kept separate from the camera fit so it does
   // not re-fire when `controls` becomes available on the very first load.
@@ -119,9 +123,9 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     gsap.fromTo(
       groupRef.current.scale,
       { x: 0.01, y: 0.01, z: 0.01 },
-      { x: 1, y: 1, z: 1, duration: 0.9, ease: 'back.out(1.5)' },
+      { x: 1, y: 1, z: 1, duration: 0.9, ease: 'back.out(1.5)', onUpdate: invalidate },
     )
-  }, [molecule])
+  }, [molecule, invalidate])
 
   // Frame the camera to the molecule's bounding radius.
   useLayoutEffect(() => {
@@ -129,7 +133,10 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     const fov = (camera.fov * Math.PI) / 180
     const dist = (molecule.radius / Math.sin(fov / 2)) * 1.5
     const to = new THREE.Vector3(0.4, 0.3, 1).normalize().multiplyScalar(dist)
-    const onUpdate = () => controls?.update()
+    const onUpdate = () => {
+      controls?.update()
+      invalidate()
+    }
 
     gsap.killTweensOf(camera.position)
     gsap.to(camera.position, {
@@ -144,7 +151,7 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
       gsap.killTweensOf(controls.target)
       gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 0.9, ease: 'power3.out' })
     }
-  }, [molecule, camera, controls])
+  }, [molecule, camera, controls, invalidate])
 
   // Atom picking: hover to identify (always on), click to select (only while measuring).
   const onAtomMove = (e: ThreeEvent<PointerEvent>) => {

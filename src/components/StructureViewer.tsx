@@ -75,6 +75,10 @@ export function StructureViewer({ molecule, loading }: Readonly<Props>) {
             the flex/grid sizing; the container height stays driven by content and resets
             per compound instead of sticking at the tallest one seen. */}
         <Canvas
+          // On-demand rendering: an idle molecule costs ~0 GPU/CPU. Everything that changes
+          // per frame requests one explicitly (spin driver, GSAP onUpdate, instance writes);
+          // drag/zoom and hover/measure overlays already invalidate via drei/the reconciler.
+          frameloop="demand"
           camera={{ position: [0, 0, 30], fov: 45, near: 0.1, far: 1000 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: true }}

@@ -1,14 +1,32 @@
+import { useEffect } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { Bloom, EffectComposer, N8AO } from '@react-three/postprocessing'
 import type { Molecule as Mol } from '../data/molecule'
 import { Molecule } from './Molecule'
 import { useStore } from '../store'
 
+// Under frameloop="demand" the auto-rotate has no permanent loop to run in, so while spin
+// is on we request a frame every tick (which lets drei's OrbitControls advance autoRotate);
+// the effect kicks the first frame when spin flips on. Idle-when-not-spinning stays at ~0.
+function SpinDriver({ spin }: Readonly<{ spin: boolean }>) {
+  const invalidate = useThree((s) => s.invalidate)
+  useFrame(() => {
+    if (spin) invalidate()
+  })
+  useEffect(() => {
+    if (spin) invalidate()
+  }, [spin, invalidate])
+  return null
+}
+
 export function Scene({ molecule }: Readonly<{ molecule: Mol | null }>) {
   const spin = useStore((s) => s.spin)
 
   return (
     <>
+      <SpinDriver spin={spin} />
+
       {/* Transparent canvas: the card behind it provides the background gradient. */}
       {/* Key light, cool fill, and a soft ambient so nothing goes fully black. */}
       <ambientLight intensity={0.55} />
