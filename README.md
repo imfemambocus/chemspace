@@ -55,10 +55,13 @@ There is no database and no build-time data step. Everything is fetched live fro
 In development, calls go through a small Vite proxy so the browser talks to PubChem same-origin and
 sidesteps CORS.
 
-Performance is a feature here, not an afterthought. A whole molecule is **two draw calls**: one
-instanced mesh for every atom and one for every bond, regardless of how many there are. Animation
-never runs through React state, so the render loop stays at 60fps. Molecules today are small, so
-this is really headroom for the bigger structures (proteins, assemblies) I want to load later.
+Performance is a feature here, not an afterthought. The heavy 3D (three.js and friends) is
+code-split out of the initial load, so the page text paints immediately and the viewer streams in
+behind it. Rendering is on-demand: an idle molecule that isn't spinning draws nothing at all.
+When it does draw, a whole molecule is **two draw calls**: one instanced mesh for every atom and
+one for every bond, regardless of how many there are. Animation never runs through React state.
+Molecules today are small, so this is really headroom for the bigger structures I want to load
+later.
 
 ## Getting started
 
@@ -88,11 +91,10 @@ state, and Tailwind for the UI around the canvas.
 ## Where it's going
 
 The focus now is speed. ChemSpace is deliberately a single page, the compound page, that you reach
-by searching, and the goal is for it to feel instant: text on screen immediately, the 3D streaming
-in behind it, and near-zero cost when a molecule is just sitting there. Next up:
+by searching. Text lands on screen immediately, the 3D streams in behind it, and an idle molecule
+costs almost nothing: that part is already in place. Next up:
 
-- On-demand rendering, so an idle molecule uses no GPU
-- Splitting the heavy 3D out of the initial load, and caching compounds you have already opened
+- Caching compounds you have already opened, and cancelling stale requests when you search again
 - A lighter, SVG property radar in place of the second WebGL canvas
 - A 2D depiction toggle, and quick druglikeness flags (Lipinski, Veber, QED)
 
