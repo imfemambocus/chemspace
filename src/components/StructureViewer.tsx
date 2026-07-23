@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import type { Molecule } from '../data/molecule'
 import { cpkColor } from '../data/elements'
 import { Scene } from '../three/Scene'
+import { measure } from '../three/measure'
 import { ViewerHint } from './ViewerHint'
 import { useStore } from '../store'
 
@@ -15,6 +16,13 @@ export function StructureViewer({ molecule, loading }: Readonly<Props>) {
   const setStyle = useStore((s) => s.setStyle)
   const spin = useStore((s) => s.spin)
   const toggleSpin = useStore((s) => s.toggleSpin)
+  const measuring = useStore((s) => s.measure)
+  const toggleMeasure = useStore((s) => s.toggleMeasure)
+  const selection = useStore((s) => s.selection)
+  const clearSelection = useStore((s) => s.clearSelection)
+
+  // The live measurement doubles as the accessible, non-3D readout of the picked atoms.
+  const result = molecule && selection.length >= 2 ? measure(molecule.atoms, selection) : null
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
@@ -35,6 +43,16 @@ export function StructureViewer({ molecule, loading }: Readonly<Props>) {
             value={style}
             onChange={(v) => setStyle(v as typeof style)}
           />
+          <button
+            onClick={toggleMeasure}
+            className={`rounded-md border px-2.5 py-1 text-xs transition ${
+              measuring
+                ? 'border-accent/40 bg-accent/10 text-accent'
+                : 'border-white/10 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+            }`}
+          >
+            Measure
+          </button>
           <button
             onClick={toggleSpin}
             className={`rounded-md border px-2.5 py-1 text-xs transition ${
@@ -61,9 +79,36 @@ export function StructureViewer({ molecule, loading }: Readonly<Props>) {
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: true }}
           style={{ position: 'absolute', inset: 0 }}
+          onPointerMissed={clearSelection}
         >
           <Scene molecule={molecule} />
         </Canvas>
+
+        {/* Measurement readout: the live value, and the accessible view of what's picked. */}
+        {molecule && !loading && measuring && (
+          <div className="absolute left-3 top-3 max-w-60 rounded-lg border border-white/10 bg-neutral-900/85 px-3 py-2 text-xs backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <span className="uppercase tracking-wider text-neutral-500">Measure</span>
+              <button
+                onClick={clearSelection}
+                disabled={!selection.length}
+                className="text-neutral-400 transition hover:text-neutral-100 disabled:opacity-40"
+              >
+                Clear
+              </button>
+            </div>
+            {result ? (
+              <div className="mt-1.5">
+                <span className="identifier text-neutral-400">{result.label}</span>
+                <span className="ml-2 font-medium text-accent">{result.text}</span>
+              </div>
+            ) : (
+              <p className="mt-1.5 leading-relaxed text-neutral-500">
+                Click atoms: two for a distance, three for an angle, four for a torsion.
+              </p>
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
