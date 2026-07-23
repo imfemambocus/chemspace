@@ -10,10 +10,10 @@
 
 # ChemSpace
 
-Type in a PubChem compound ID and ChemSpace shows you the molecule the way it actually sits in
-space: an interactive 3D ball-and-stick model you can orbit, spin, and inflate into a
-space-filling blob, wrapped in a dark compound-detail page with its identifiers and a little 3D
-readout of its properties.
+Search for a compound and ChemSpace shows you the molecule the way it actually sits in space: an
+interactive 3D ball-and-stick model you can orbit, spin, and inflate into a space-filling blob,
+wrapped in a dark compound-detail page with its identifiers and a little visual readout of its
+properties.
 
 It started as a weekend experiment and turned into the thing I bring to the LCSB bioinformatics
 core group's monthly idea-sharing meeting, one small increment at a time.
@@ -33,10 +33,10 @@ core group's monthly idea-sharing meeting, one small increment at a time.
   the real coordinates.
 - **The numbers that matter.** A side panel lists the formula, mass, XLogP, SMILES, InChI, and the
   rest, with a link back out to the compound's PubChem page.
-- **A 3D property radar.** Instead of a plain table, the computed descriptors (molecular weight,
-  XLogP, TPSA, H-bond donors and acceptors, rotatable bonds) grow out of a spider-web platform as a
-  ring of bars, each normalized to a typical small-molecule range. The value list underneath doubles
-  as the accessible table view.
+- **A property radar.** Instead of a plain table, the computed descriptors (molecular weight,
+  XLogP, TPSA, H-bond donors and acceptors, rotatable bonds) are drawn as a ring of bars, each
+  normalized to a typical small-molecule range. The value list underneath doubles as the accessible
+  table view.
 - **Small touches.** A first-load splash where a molecule assembles and tumbles, a camera that
   frames each new structure automatically, ambient occlusion and a soft bloom so the model reads
   with real depth, and animation that leans on GSAP so it feels designed rather than bolted on.
@@ -87,11 +87,17 @@ state, and Tailwind for the UI around the canvas.
 
 ## Where it's going
 
-A rough, in-priority-ish order of what I want to add next:
+The focus now is speed. ChemSpace is deliberately a single page, the compound page, that you reach
+by searching, and the goal is for it to feel instant: text on screen immediately, the 3D streaming
+in behind it, and near-zero cost when a molecule is just sitting there. Next up:
 
-- Translucent molecular surfaces over the sticks
-- Proteins from the PDB or AlphaFold, where the instancing headroom finally earns its keep
-- Comparing two molecules side by side, or overlaid and aligned
+- On-demand rendering, so an idle molecule uses no GPU
+- Splitting the heavy 3D out of the initial load, and caching compounds you have already opened
+- A lighter, SVG property radar in place of the second WebGL canvas
+- A 2D depiction toggle, and quick druglikeness flags (Lipinski, Veber, QED)
+
+Deliberately out of scope, to keep it fast and light: proteins, molecular surfaces, and multi-
+molecule comparison. This is a fast viewer for one small molecule at a time, not a data platform.
 
 ## A note
 
