@@ -23,8 +23,14 @@ core group's monthly idea-sharing meeting, one small increment at a time.
 - **Real 3D structures, not flat diagrams.** Most compound pages show you a 2D sketch. ChemSpace
   pulls the actual 3D conformer and renders it as CPK-colored atoms and bonds you can look at from
   any angle.
+- **Search however you think of it.** Type a compound name, a SMILES string, or a bare PubChem CID;
+  it resolves to the right compound. Every molecule also has a shareable link (`?cid=2519`) that
+  opens straight to it.
 - **Ball-and-stick or space-filling.** Toggle between the two classic representations. Bonds fade
   out in space-filling mode, where they would just be noise.
+- **Hover to identify, click to measure.** Point at any atom or bond to see what it is; flip on
+  Measure and click atoms to read off a bond distance, a valence angle, or a torsion, straight from
+  the real coordinates.
 - **The numbers that matter.** A side panel lists the formula, mass, XLogP, SMILES, InChI, and the
   rest, with a link back out to the compound's PubChem page.
 - **A 3D property radar.** Instead of a plain table, the computed descriptors (molecular weight,
@@ -61,8 +67,8 @@ npm install
 npm run dev
 ```
 
-Then open the local URL Vite prints. Enter a CID (try `2519` for caffeine) or click one of the
-example chips.
+Then open the local URL Vite prints. Search by name (try `caffeine`), a SMILES string, or a CID
+(`2519`), or click one of the example chips.
 
 ```bash
 npm run build   # typechecks, then builds for production
@@ -83,11 +89,9 @@ state, and Tailwind for the UI around the canvas.
 
 A rough, in-priority-ish order of what I want to add next:
 
-- Search by name or SMILES, not just CID
-- Shareable deep links (`?cid=2519`) that open straight to a molecule
-- Hover an atom or bond for details, and click-to-measure distances and angles
 - Translucent molecular surfaces over the sticks
 - Proteins from the PDB or AlphaFold, where the instancing headroom finally earns its keep
+- Comparing two molecules side by side, or overlaid and aligned
 
 ## A note
 

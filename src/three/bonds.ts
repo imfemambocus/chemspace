@@ -7,6 +7,7 @@ export interface BondInstance {
   quaternion: THREE.Quaternion
   length: number
   color: string
+  bond: number // index into molecule.bonds, so a picked cylinder maps back to its bond
 }
 
 const Y = new THREE.Vector3(0, 1, 0)
@@ -37,7 +38,8 @@ export function buildBondInstances(mol: Molecule): BondInstance[] {
   const perp = new THREE.Vector3()
   const seed = new THREE.Vector3()
 
-  for (const bond of mol.bonds) {
+  for (let bi = 0; bi < mol.bonds.length; bi++) {
+    const bond = mol.bonds[bi]
     const A = mol.atoms[bond.a]
     const B = mol.atoms[bond.b]
     if (!A || !B) continue
@@ -73,14 +75,14 @@ export function buildBondInstances(mol: Molecule): BondInstance[] {
       pa.x += ox
       pa.y += oy
       pa.z += oz
-      out.push({ position: pa, quaternion: quaternion.clone(), length: halfLen, color: colA })
+      out.push({ position: pa, quaternion: quaternion.clone(), length: halfLen, color: colA, bond: bi })
 
       // Half nearest B: centered three-quarters along.
       const pb = va.clone().addScaledVector(dir, fullLen * 0.75)
       pb.x += ox
       pb.y += oy
       pb.z += oz
-      out.push({ position: pb, quaternion: quaternion.clone(), length: halfLen, color: colB })
+      out.push({ position: pb, quaternion: quaternion.clone(), length: halfLen, color: colB, bond: bi })
     }
   }
 
