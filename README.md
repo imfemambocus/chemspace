@@ -57,7 +57,9 @@ sidesteps CORS.
 
 Performance is a feature here, not an afterthought. The heavy 3D (three.js and friends) is
 code-split out of the initial load, so the page text paints immediately and the viewer streams in
-behind it. Rendering is on-demand: an idle molecule that isn't spinning draws nothing at all.
+behind it. Compounds you have already opened are cached (in memory and across reloads), so
+revisiting one is instant, and starting a new search cancels the previous request mid-flight.
+Rendering is on-demand: an idle molecule that isn't spinning draws nothing at all.
 When it does draw, a whole molecule is **two draw calls**: one instanced mesh for every atom and
 one for every bond, regardless of how many there are. Animation never runs through React state.
 Molecules today are small, so this is really headroom for the bigger structures I want to load
@@ -94,7 +96,6 @@ The focus now is speed. ChemSpace is deliberately a single page, the compound pa
 by searching. Text lands on screen immediately, the 3D streams in behind it, and an idle molecule
 costs almost nothing: that part is already in place. Next up:
 
-- Caching compounds you have already opened, and cancelling stale requests when you search again
 - A lighter, SVG property radar in place of the second WebGL canvas
 - A 2D depiction toggle, and quick druglikeness flags (Lipinski, Veber, QED)
 
