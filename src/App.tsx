@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { fetchMolecule, type Molecule } from './data/molecule'
 import { fetchProperties, type Properties } from './data/properties'
 import { Loader } from './components/Loader'
 import { Header } from './components/Header'
 import { Formula } from './components/Formula'
 import { StructuralInfo } from './components/StructuralInfo'
-import { StructureViewer } from './components/StructureViewer'
 import { ProfileSection } from './components/ProfileSection'
+
+// The 3D viewer pulls in three.js, drei and postprocessing, so keep it out of the entry
+// chunk: it renders immediately (import kicks off on mount, in parallel with the fetch),
+// but text-first paint never waits on three.js. A placeholder holds the card's frame.
+const StructureViewer = lazy(() =>
+  import('./components/StructureViewer').then((m) => ({ default: m.StructureViewer })),
+)
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -17,6 +23,26 @@ function initialCid(): number {
   const param = new URLSearchParams(window.location.search).get('cid')
   const n = param ? Number.parseInt(param, 10) : Number.NaN
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_CID
+}
+
+// Holds the structure card's frame (border, toolbar bar, canvas min-heights) while the
+// lazy 3D chunk streams in, so the grid row doesn't reflow when the viewer mounts.
+function ViewerFallback() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
+      <div className="flex items-center border-b border-white/10 px-4 py-2.5">
+        <span className="text-xs uppercase tracking-wider text-neutral-500">3D structure</span>
+      </div>
+      <div
+        className="relative flex-1 min-h-75 sm:min-h-105 lg:min-h-120"
+        style={{ background: 'radial-gradient(circle at 50% 35%, #151515, #0a0a0a 70%)' }}
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="animate-pulse text-sm text-neutral-500">Loading 3D…</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function CompoundTitle({
@@ -114,7 +140,9 @@ export default function App() {
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
               <StructuralInfo props={props} loading={loading} />
-              <StructureViewer molecule={status === 'ready' ? molecule : null} loading={loading} />
+              <Suspense fallback={<ViewerFallback />}>
+                <StructureViewer molecule={status === 'ready' ? molecule : null} loading={loading} />
+              </Suspense>
             </div>
 
             <ProfileSection props={props} loading={loading} />

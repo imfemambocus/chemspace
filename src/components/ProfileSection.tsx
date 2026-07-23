@@ -1,8 +1,12 @@
-import { Canvas } from '@react-three/fiber'
+import { lazy, Suspense } from 'react'
 import type { Properties } from '../data/properties'
 import { descriptors } from '../data/properties'
-import { RadarScene } from '../three/RadarScene'
-import { ViewerHint } from './ViewerHint'
+
+// The radar canvas carries three.js, so load it on demand: the value list below paints
+// from the entry chunk while this streams in.
+const RadarCanvas = lazy(() =>
+  import('./RadarCanvas').then((m) => ({ default: m.RadarCanvas })),
+)
 
 // The "Profile" section: a 3D radial bar chart of computed descriptors, paired with a
 // value list that doubles as the accessible table view.
@@ -23,18 +27,12 @@ export function ProfileSection({ props, loading }: Readonly<{ props: Properties 
           style={{ background: 'radial-gradient(circle at 50% 60%, #141414, #0a0a0a 70%)' }}
         >
           {props && !loading ? (
-            <Canvas camera={{ position: [0, 4, 9], fov: 42, near: 0.1, far: 100 }} dpr={[1, 2]}>
-              <RadarScene descriptors={data} />
-            </Canvas>
+            <Suspense fallback={<RadarFallback label="Loading chart…" />}>
+              <RadarCanvas data={data} />
+            </Suspense>
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="animate-pulse text-sm text-neutral-600">
-                {loading ? 'Loading descriptors…' : 'Descriptors unavailable'}
-              </span>
-            </div>
+            <RadarFallback label={loading ? 'Loading descriptors…' : 'Descriptors unavailable'} />
           )}
-
-          {props && !loading && <ViewerHint />}
         </div>
 
         {/* Value list / table view */}
@@ -61,6 +59,16 @@ export function ProfileSection({ props, loading }: Readonly<{ props: Properties 
         </div>
       </div>
     </section>
+  )
+}
+
+// Shared placeholder for the radar cell: shown while descriptors load, while the WebGL
+// chunk streams in, or when a compound has no descriptors.
+function RadarFallback({ label }: Readonly<{ label: string }>) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <span className="animate-pulse text-sm text-neutral-600">{label}</span>
+    </div>
   )
 }
 
