@@ -2,6 +2,8 @@
 // into atoms and bonds. PubChem's PUG REST returns an SDF with 3D coordinates via
 // record_type=3d; if a compound has no 3D conformer we fall back to the flat 2D layout.
 
+import { readCache, writeCache } from './cache'
+
 export interface Atom {
   el: string
   x: number
@@ -23,22 +25,31 @@ export interface Molecule {
   is3D: boolean
 }
 
-async function load(cid: number, type: '3d' | '2d'): Promise<Molecule> {
+async function load(cid: number, type: '3d' | '2d', signal?: AbortSignal): Promise<Molecule> {
   const url = `/pubchem/rest/pug/compound/cid/${cid}/record/SDF?record_type=${type}`
-  const res = await fetch(url)
+  const res = await fetch(url, { signal })
   if (!res.ok) {
     throw new Error(`PubChem returned ${res.status} for CID ${cid} (${type})`)
   }
   return parseSDF(await res.text(), cid, type === '3d')
 }
 
-export async function fetchMolecule(cid: number): Promise<Molecule> {
-  // Prefer the real 3D conformer; fall back to the 2D depiction laid flat.
+export async function fetchMolecule(cid: number, signal?: AbortSignal): Promise<Molecule> {
+  const key = `mol:${cid}`
+  const hit = readCache<Molecule>(key)
+  if (hit) return hit
+
+  // Prefer the real 3D conformer; fall back to the 2D depiction laid flat. A superseded
+  // request aborts, so don't fire the 2D fallback after the caller cancelled.
+  let mol: Molecule
   try {
-    return await load(cid, '3d')
-  } catch {
-    return await load(cid, '2d')
+    mol = await load(cid, '3d', signal)
+  } catch (e) {
+    if (signal?.aborted) throw e
+    mol = await load(cid, '2d', signal)
   }
+  writeCache(key, mol)
+  return mol
 }
 
 // V2000 uses fixed-width columns, so slice by position rather than splitting on

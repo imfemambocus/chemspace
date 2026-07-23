@@ -3,6 +3,8 @@
 // radar. Note: PubChem renamed the SMILES property (IsomericSMILES -> SMILES) in a
 // 2025 API change, so we try the new name and fall back to the old one.
 
+import { readCache, writeCache } from './cache'
+
 export interface Properties {
   cid: number
   iupacName?: string
@@ -38,10 +40,14 @@ function num(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined
 }
 
-async function request(cid: number, smilesKey: 'SMILES' | 'IsomericSMILES'): Promise<Properties> {
+async function request(
+  cid: number,
+  smilesKey: 'SMILES' | 'IsomericSMILES',
+  signal?: AbortSignal,
+): Promise<Properties> {
   const list = [...CORE, smilesKey].join(',')
   const url = `/pubchem/rest/pug/compound/cid/${cid}/property/${list}/JSON`
-  const res = await fetch(url)
+  const res = await fetch(url, { signal })
   if (!res.ok) throw new Error(`PubChem properties returned ${res.status} for CID ${cid}`)
 
   const json = await res.json()
@@ -65,12 +71,22 @@ async function request(cid: number, smilesKey: 'SMILES' | 'IsomericSMILES'): Pro
   }
 }
 
-export async function fetchProperties(cid: number): Promise<Properties> {
+export async function fetchProperties(cid: number, signal?: AbortSignal): Promise<Properties> {
+  const key = `prop:${cid}`
+  const hit = readCache<Properties>(key)
+  if (hit) return hit
+
+  // Try the current SMILES property name, fall back to the pre-2025 one. Skip the
+  // fallback if the request was aborted (superseded by a newer search).
+  let props: Properties
   try {
-    return await request(cid, 'SMILES')
-  } catch {
-    return await request(cid, 'IsomericSMILES')
+    props = await request(cid, 'SMILES', signal)
+  } catch (e) {
+    if (signal?.aborted) throw e
+    props = await request(cid, 'IsomericSMILES', signal)
   }
+  writeCache(key, props)
+  return props
 }
 
 // Descriptors for the radar, each normalized against a typical small-molecule range

@@ -68,28 +68,29 @@ export default function App() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    let cancelled = false
+    // One controller both cancels the in-flight requests when the CID changes (a new
+    // search supersedes the old one) and guards against a stale response setting state.
+    const controller = new AbortController()
+    const { signal } = controller
     setStatus('loading')
     setError('')
 
     // The structure is required; properties are best-effort so a compound without
     // some descriptors still renders.
-    Promise.all([fetchMolecule(cid), fetchProperties(cid).catch(() => null)])
+    Promise.all([fetchMolecule(cid, signal), fetchProperties(cid, signal).catch(() => null)])
       .then(([m, p]) => {
-        if (cancelled) return
+        if (signal.aborted) return
         setMolecule(m)
         setProps(p)
         setStatus('ready')
       })
       .catch((err: unknown) => {
-        if (cancelled) return
+        if (signal.aborted) return
         setError(err instanceof Error ? err.message : 'Failed to load this compound')
         setStatus('error')
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [cid])
 
   // Keep the URL in sync so the current compound is always shareable. replaceState
