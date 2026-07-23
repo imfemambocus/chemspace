@@ -10,6 +10,15 @@ import { ProfileSection } from './components/ProfileSection'
 
 type Status = 'loading' | 'ready' | 'error'
 
+const DEFAULT_CID = 177785841 // the C10H14N2 compound
+
+// Read the CID from a shareable ?cid= link so a pasted URL opens that molecule.
+function initialCid(): number {
+  const param = new URLSearchParams(window.location.search).get('cid')
+  const n = param ? Number.parseInt(param, 10) : Number.NaN
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_CID
+}
+
 function CompoundTitle({
   loading,
   props,
@@ -26,7 +35,7 @@ function CompoundTitle({
 }
 
 export default function App() {
-  const [cid, setCid] = useState(177785841) // the C10H14N2 compound from the meeting
+  const [cid, setCid] = useState(initialCid)
   const [molecule, setMolecule] = useState<Molecule | null>(null)
   const [props, setProps] = useState<Properties | null>(null)
   const [status, setStatus] = useState<Status>('loading')
@@ -55,6 +64,14 @@ export default function App() {
     return () => {
       cancelled = true
     }
+  }, [cid])
+
+  // Keep the URL in sync so the current compound is always shareable. replaceState
+  // avoids piling a history entry onto every example-chip click.
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('cid', String(cid))
+    window.history.replaceState(null, '', url)
   }, [cid])
 
   const loading = status === 'loading'

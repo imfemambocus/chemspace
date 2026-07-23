@@ -23,14 +23,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Hide scrollbars app-wide; scrolling (wheel, trackpad, keyboard) still works. */
+/* Thin scrollbar in the accent teal on a dark track, app-wide. */
 * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* legacy Edge/IE */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-accent) #171717; /* thumb, track */
 }
 
 *::-webkit-scrollbar {
-  display: none; /* WebKit */
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #171717;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-accent);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-dim);
 }
 
 /* First-load splash. */
