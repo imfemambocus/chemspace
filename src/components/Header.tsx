@@ -1,13 +1,26 @@
 import { useState } from 'react'
 import { EXAMPLES } from '../data/elements'
+import { resolveCid } from '../data/resolve'
 
-// Sticky top bar: wordmark, CID search, and example quick-picks.
+// Sticky top bar: wordmark, compound search, and example quick-picks. The search
+// accepts a name, SMILES, or bare CID and resolves it to a CID before loading.
 export function Header({ cid, onLoadCid }: Readonly<{ cid: number; onLoadCid: (cid: number) => void }>) {
   const [input, setInput] = useState('')
+  const [resolving, setResolving] = useState(false)
+  const [searchError, setSearchError] = useState('')
 
-  const loadInput = () => {
-    const n = Number.parseInt(input.trim(), 10)
-    if (Number.isFinite(n) && n > 0) onLoadCid(n)
+  const submit = async () => {
+    const q = input.trim()
+    if (!q || resolving) return
+    setResolving(true)
+    setSearchError('')
+    try {
+      onLoadCid(await resolveCid(q))
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : 'Search failed')
+    } finally {
+      setResolving(false)
+    }
   }
 
   return (
@@ -21,24 +34,29 @@ export function Header({ cid, onLoadCid }: Readonly<{ cid: number; onLoadCid: (c
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            loadInput()
+            void submit()
           }}
           className="flex flex-1 justify-end gap-2"
         >
           <input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            inputMode="numeric"
-            placeholder="PubChem CID"
-            className="w-40 rounded-md border border-white/10 bg-neutral-900/70 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none focus:border-accent/50"
+            onChange={(e) => {
+              setInput(e.target.value)
+              if (searchError) setSearchError('')
+            }}
+            placeholder="Name, SMILES, or CID"
+            className="w-56 rounded-md border border-white/10 bg-neutral-900/70 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none focus:border-accent/50"
           />
           <button
             type="submit"
-            className="rounded-md border border-white/10 bg-neutral-800/80 px-3 py-1.5 text-sm text-neutral-200 transition hover:border-white/25 hover:text-white"
+            disabled={resolving}
+            className="rounded-md border border-white/10 bg-neutral-800/80 px-3 py-1.5 text-sm text-neutral-200 transition hover:border-white/25 hover:text-white disabled:opacity-50"
           >
-            Load
+            {resolving ? 'Searching…' : 'Load'}
           </button>
         </form>
+
+        {searchError && <p className="w-full -mt-1 text-right text-xs text-red-400">{searchError}</p>}
 
         <div className="flex w-full flex-wrap gap-1.5">
           {EXAMPLES.map((ex) => (
