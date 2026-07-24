@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import type { Molecule } from '../data/molecule'
+import { fetchMolecule2D, type Molecule } from '../data/molecule'
 import { cpkColor } from '../data/elements'
 import { Scene } from '../three/Scene'
 import { measure } from '../three/measure'
 import { ViewerHint } from './ViewerHint'
 import { LogoMark } from './LogoMark'
+import { Depiction2D } from './Depiction2D'
 import { useStore } from '../store'
 
 interface Props {
@@ -14,23 +15,25 @@ interface Props {
   cid: number
 }
 
-// Which structure representation is showing: the interactive 3D model, or PubChem's flat 2D
-// depiction (a plain PNG). 2D needs only the CID, so it works even for compounds with no 3D
-// conformer, where we would otherwise be worse than PubChemLite's own 2D drawing.
+// Which structure representation is showing: the interactive 3D model, or a flat 2D depiction
+// we draw as SVG from PubChem's 2D layout coordinates. 2D needs only the CID, so it works even
+// for compounds with no 3D conformer, where we would otherwise be worse than PubChemLite.
 type View = '3d' | '2d'
 
 // Hold the assembling logo up for at least this long so its full animation plays before the
-// 2D image replaces it, even when the image is cached (skipped under reduced motion).
+// 2D depiction replaces it, even when the data is cached (skipped under reduced motion).
 const MIN_2D_LOADER_MS = 900
 
 export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
   const [view, setView] = useState<View>('3d')
-  // the CID whose 2D image is showing; while it lags behind `cid` the logo mark spins
+  // the loaded 2D layout to draw, and the CID it is for
+  const [mol2d, setMol2d] = useState<Molecule | null>(null)
+  // the CID whose 2D depiction is revealed; while it lags behind `cid` the logo mark spins
   const [loadedCid, setLoadedCid] = useState<number | null>(null)
   const loadStart = useRef(0)
   const loaderTimer = useRef<number | null>(null)
-  // CIDs whose 2D image has already been fetched this session, so toggling back does not replay
-  // the loader for an image that is now cached
+  // CIDs whose 2D layout has already been fetched this session, so toggling back does not replay
+  // the loader for data that is now cached
   const loadedOnce = useRef<Set<number>>(new Set())
   const style = useStore((s) => s.style)
   const setStyle = useStore((s) => s.setStyle)
@@ -44,33 +47,44 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
   // The live measurement doubles as the accessible, non-3D readout of the picked atoms.
   const result = molecule && selection.length >= 2 ? measure(molecule.atoms, selection) : null
 
-  // When the 2D image to show changes, replay the loader only for an image not fetched yet;
-  // an already-fetched (cached) one shows straight away.
+  // Fetch and reveal the 2D layout when the 2D view is active. A superseded CID aborts. The
+  // logo mark spins until reveal; a CID already fetched this session skips the loader minimum.
   useEffect(() => {
     if (view !== '2d') return
-    if (loadedOnce.current.has(cid)) {
-      setLoadedCid(cid)
-      return
-    }
+    const controller = new AbortController()
+    const cached = loadedOnce.current.has(cid)
     loadStart.current = Date.now()
-    setLoadedCid(null)
+    if (!cached) setLoadedCid(null)
+
+    fetchMolecule2D(cid, controller.signal)
+      .then((m) => {
+        setMol2d(m)
+        reveal(cid, cached)
+      })
+      .catch(() => {
+        // on failure just clear the loader so it does not spin forever; without mol2d the
+        // depiction simply does not render for this CID
+        if (!controller.signal.aborted) reveal(cid, cached)
+      })
+
     return () => {
+      controller.abort()
       if (loaderTimer.current != null) clearTimeout(loaderTimer.current)
     }
   }, [cid, view])
 
-  // Reveal the 2D image once it has decoded, but not before the loader's minimum has elapsed.
-  // A cached image (already seen this session) skips the wait entirely.
-  const revealImage = () => {
-    if (loadedOnce.current.has(cid)) {
-      setLoadedCid(cid)
+  // Reveal the 2D depiction, but not before the loader's minimum has elapsed. A cached CID
+  // (already seen this session) skips the wait entirely.
+  const reveal = (c: number, cached: boolean) => {
+    if (cached) {
+      setLoadedCid(c)
       return
     }
-    loadedOnce.current.add(cid)
+    loadedOnce.current.add(c)
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const min = reduce ? 0 : MIN_2D_LOADER_MS
     const wait = Math.max(0, min - (Date.now() - loadStart.current))
-    loaderTimer.current = window.setTimeout(() => setLoadedCid(cid), wait)
+    loaderTimer.current = window.setTimeout(() => setLoadedCid(c), wait)
   }
 
   return (
@@ -138,26 +152,24 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
         style={{ background: 'radial-gradient(circle at 50% 35%, #151515, #0a0a0a 70%)' }}
       >
         {view === '2d' ? (
-          // Plain PNG from PubChem's depiction endpoint, on a light card so the white-
-          // background drawing reads as a sheet against the dark canvas. Needs only the CID.
-          // The spinning logo mark holds the space until the image decodes, then it fades in.
+          // Our own 2D depiction, drawn as SVG line art from PubChem's 2D layout coordinates
+          // (Depiction2D) so it floats on the same dark canvas as the 3D model instead of a
+          // white sheet. The spinning logo mark holds the space until it loads, then it fades in.
           <div className="absolute inset-0 flex items-center justify-center p-6">
             {loadedCid !== cid && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <LogoMark size={72} />
               </div>
             )}
-            <img
-              key={cid}
-              src={`/pubchem/rest/pug/compound/cid/${cid}/PNG?image_size=large`}
-              alt={`2D structural depiction of CID ${cid}`}
-              onLoad={revealImage}
-              onError={revealImage}
-              className={`max-h-full max-w-full rounded-lg bg-white p-3 shadow-xl transition-opacity duration-300 ${
-                loadedCid === cid ? 'opacity-100' : 'opacity-0'
-              }`}
-              loading="lazy"
-            />
+            {mol2d && mol2d.cid === cid && (
+              <div
+                className={`h-full w-full transition-opacity duration-300 ${
+                  loadedCid === cid ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <Depiction2D molecule={mol2d} />
+              </div>
+            )}
           </div>
         ) : (
           <>
