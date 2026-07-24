@@ -159,6 +159,34 @@ body {
   }
 }
 
+/* Property-radar reveal: the value area grows from its own center once the splash clears.
+   transform-box: fill-box + transform-origin: center scales the group about the middle of its
+   own bounding box, which avoids the viewBox-offset quirks of view-box percentages (those can
+   land the origin on a corner, making the shape slide in). Held collapsed until .radar-play. */
+.radar-shape {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  opacity: 0;
+}
+.radar-shape.radar-play {
+  animation: radar-reveal 0.9s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+@keyframes radar-reveal {
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-shape.radar-play {
+    animation: none;
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Interactivity hint on the 3D viewers. */
 .viewer-hint {
   position: absolute;
