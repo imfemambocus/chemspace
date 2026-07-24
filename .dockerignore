@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-ssr
+.git
+.github
+.claude
+*.local
+.DS_Store
+.vscode
+npm-debug.log*
+.dockerignore
+docker-compose.yml
+CLAUDE.md
+README.md
+sonar-project.properties

@@ -58,8 +58,8 @@ There is no database and no build-time data step. Everything is fetched live fro
 - The **identifiers and descriptors** come from the property endpoint, best-effort: a compound
   missing a value still renders fine.
 
-In development, calls go through a small Vite proxy so the browser talks to PubChem same-origin and
-sidesteps CORS.
+Calls go through a small proxy so the browser talks to PubChem same-origin and sidesteps CORS: the
+Vite dev server provides one in development, and the Docker image does the same with nginx.
 
 Performance is a feature here, not an afterthought. The heavy 3D (three.js and friends) is
 code-split out of the initial load, so the page text paints immediately and the viewer streams in
@@ -85,8 +85,20 @@ Then open the local URL Vite prints. Search by name (try `caffeine`), a SMILES s
 npm run build   # typechecks, then builds for production
 ```
 
-Heads-up: the PubChem proxy only exists in the dev server. A production deploy needs its own proxy
-or a CORS-friendly data host.
+### Or run it in Docker
+
+To run the production build in a container instead:
+
+```bash
+docker compose up -d --build
+```
+
+Then open `http://localhost:8090`. The image builds the app and serves it with nginx, which also
+proxies PubChem for you, so it behaves like the dev server without needing anything else installed.
+
+Heads-up: the app reaches PubChem through a proxy so the browser stays same-origin. Both the dev
+server and the Docker image ship with one; only a hand-rolled static deploy (just the built files on
+a CDN) would need its own proxy or a CORS-friendly data host.
 
 ## Tech
 
