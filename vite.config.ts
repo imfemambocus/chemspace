@@ -19,6 +19,13 @@ export default defineConfig(({ mode }) => ({
         brotliSize: true,
       }),
   ],
+  build: {
+    // The only chunk over the 500 kB default is the lazily-imported StructureViewer (three.js +
+    // drei + postprocessing + n8ao). It is code-split out of the entry and downloads only after
+    // the text paints, and three.js is irreducible, so the warning is noise here rather than a
+    // regression to chase. Raise the limit past that chunk; the entry chunk stays ~106 kB gzip.
+    chunkSizeWarningLimit: 1300,
+  },
   server: {
     // Proxy PubChem PUG REST through the dev server so browser calls are same-origin
     // and never hit CORS. Production would need its own proxy or a CORS-safe host.

@@ -1,5 +1,4 @@
-import { useId, useLayoutEffect, useMemo, useRef } from 'react'
-import gsap from 'gsap'
+import { useId, useMemo } from 'react'
 import type { Descriptor } from '../data/properties'
 
 // SVG radar (spider) chart of the computed descriptors: a single translucent area whose
@@ -7,7 +6,9 @@ import type { Descriptor } from '../data/properties'
 // dots, over a faint concentric-ring web. Single accent hue, a direct label at each axis
 // so the chart needs no legend. Replaces the old WebGL radar to drop the second canvas /
 // render loop; the value list beside it is the accessible view. `play` gates the reveal so
-// the area holds until the first-load splash clears.
+// the area holds until the first-load splash clears. The reveal is a CSS animation (see
+// `.radar-shape` in index.css), so this component pulls in no animation library and GSAP
+// stays out of the entry chunk.
 
 const ACCENT = '#2dd4bf'
 const MAX_R = 84 // radius of the outermost (norm = 1) ring
@@ -30,7 +31,6 @@ export function PropertyRadar({
   descriptors,
   play,
 }: Readonly<{ descriptors: Descriptor[]; play: boolean }>) {
-  const shapeRef = useRef<SVGGElement>(null)
   // a <title> (named via aria-labelledby) gives the inline SVG an accessible name without the
   // role="img" that some AT/devices handle inconsistently; the value list beside it is the detail
   const titleId = useId()
@@ -49,28 +49,6 @@ export function PropertyRadar({
   }, [descriptors])
 
   const points = placed.map((p) => `${p.value.x},${p.value.y}`).join(' ')
-
-  // Reveal the filled area growing from the center (scale about the SVG origin), once the
-  // splash is out of the way (`play`). Re-runs on data change, which by then is past the
-  // splash. No React `style`/`transform` on the group so re-renders don't clobber GSAP.
-  useLayoutEffect(() => {
-    const g = shapeRef.current
-    if (!g) return
-    gsap.killTweensOf(g)
-    if (!play) {
-      gsap.set(g, { scale: 0, opacity: 0, svgOrigin: '0 0' }) // hold collapsed until the splash clears
-      return
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      gsap.set(g, { scale: 1, opacity: 1, svgOrigin: '0 0' })
-      return
-    }
-    gsap.fromTo(
-      g,
-      { scale: 0, opacity: 0 },
-      { scale: 1, opacity: 1, svgOrigin: '0 0', duration: 0.9, ease: 'power3.out' },
-    )
-  }, [placed, play])
 
   return (
     <svg
@@ -96,8 +74,10 @@ export function PropertyRadar({
         />
       ))}
 
-      {/* Value area: translucent fill, opaque-ish border, dots at each vertex. */}
-      <g ref={shapeRef}>
+      {/* Value area: translucent fill, opaque-ish border, dots at each vertex. Revealed by a
+          CSS scale-up from the chart center once the splash clears (`play`); keyed on the point
+          set so switching compound remounts the group and replays the grow. */}
+      <g key={points} className={play ? 'radar-shape radar-play' : 'radar-shape'}>
         <polygon
           points={points}
           fill={ACCENT}
