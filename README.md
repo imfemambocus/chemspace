@@ -22,8 +22,9 @@ core group's monthly idea-sharing meeting, one small increment at a time.
 
 - **Real 3D structures, not flat diagrams.** Most compound pages show you a 2D sketch. ChemSpace
   pulls the actual 3D conformer and renders it as CPK-colored atoms and bonds you can look at from
-  any angle. For the few compounds with no 3D conformer, a `3D / 2D` toggle drops back to PubChem's
-  flat depiction, so you are never worse off than a plain 2D page.
+  any angle. A `3D / 2D` toggle drops back to a flat depiction ChemSpace draws itself as SVG line
+  art, in the same dark theme as the 3D model (no white sheet), so compounds with no 3D conformer
+  still look at home.
 - **Search however you think of it.** Type a compound name, a SMILES string, or a bare PubChem CID;
   it resolves to the right compound. Every molecule also has a shareable link (`?cid=2519`) that
   opens straight to it.
@@ -52,6 +53,8 @@ There is no database and no build-time data step. Everything is fetched live fro
 - The **3D structure** comes from the SDF record (`record_type=3d`), parsed straight out of the
   column-based MOL V2000 format, centered on its centroid, and measured so the camera knows how far
   back to sit. If a compound has no 3D conformer, it falls back to the flat 2D layout and says so.
+- The **2D depiction** (the `2D` toggle) uses the compound's 2D SDF (`record_type=2d`), drawn as
+  SVG line art from those layout coordinates rather than fetching a rendered image.
 - The **identifiers and descriptors** come from the property endpoint, best-effort: a compound
   missing a value still renders fine.
 
@@ -97,9 +100,10 @@ state, and Tailwind for the UI around the canvas. The property radar is plain SV
 
 The focus now is speed. ChemSpace is deliberately a single page, the compound page, that you reach
 by searching. Text lands on screen immediately, the 3D streams in behind it, and an idle molecule
-costs almost nothing. The 2D depiction toggle and the client-side druglikeness flags (Lipinski,
-Veber, QED) are in place too. Next up is mostly keeping the bundle honest: wiring up bundle-size
-analysis to confirm the heavy 3D really is out of the initial load.
+costs almost nothing. The SVG 2D depiction toggle and the client-side druglikeness flags (Lipinski,
+Veber, QED) are in place too, and bundle-size analysis (`npm run analyze`) is wired up to keep the
+heavy 3D honestly out of the initial load. From here it is mostly polish and the occasional new
+increment for the next meeting.
 
 Deliberately out of scope, to keep it fast and light: proteins, molecular surfaces, and multi-
 molecule comparison. This is a fast viewer for one small molecule at a time, not a data platform.

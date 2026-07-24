@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef } from 'react'
 import gsap from 'gsap'
 import type { Descriptor } from '../data/properties'
 
@@ -31,6 +31,9 @@ export function PropertyRadar({
   play,
 }: Readonly<{ descriptors: Descriptor[]; play: boolean }>) {
   const shapeRef = useRef<SVGGElement>(null)
+  // a <title> (named via aria-labelledby) gives the inline SVG an accessible name without the
+  // role="img" that some AT/devices handle inconsistently; the value list beside it is the detail
+  const titleId = useId()
 
   const placed = useMemo(() => {
     const n = descriptors.length
@@ -73,9 +76,9 @@ export function PropertyRadar({
     <svg
       className="h-full w-full select-none"
       viewBox="-140 -140 280 280"
-      role="img"
-      aria-label="Property radar of computed molecular descriptors"
+      aria-labelledby={titleId}
     >
+      <title id={titleId}>Property radar of computed molecular descriptors</title>
       {/* Radar web: faint concentric magnitude rings plus one spoke per axis. */}
       {RINGS.map((f) => (
         <circle key={f} r={f * MAX_R} fill="none" stroke="#ffffff" strokeOpacity={0.08} strokeWidth={1} />

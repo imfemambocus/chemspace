@@ -52,6 +52,19 @@ export async function fetchMolecule(cid: number, signal?: AbortSignal): Promise<
   return mol
 }
 
+// Fetch just the flat 2D layout for a CID (record_type=2d), cached separately from the
+// primary 3D-preferred fetch. The 2D depiction needs real layout coordinates even for
+// compounds that do have a 3D conformer: projecting their 3D coords to 2D would overlap
+// atoms, so we always pull PubChem's dedicated 2D drawing here.
+export async function fetchMolecule2D(cid: number, signal?: AbortSignal): Promise<Molecule> {
+  const key = `mol2d:${cid}`
+  const hit = readCache<Molecule>(key)
+  if (hit) return hit
+  const mol = await load(cid, '2d', signal)
+  writeCache(key, mol)
+  return mol
+}
+
 // V2000 uses fixed-width columns, so slice by position rather than splitting on
 // whitespace (adjacent 3-digit counts can run together with no separator).
 export function parseSDF(sdf: string, cid: number, is3D: boolean): Molecule {
