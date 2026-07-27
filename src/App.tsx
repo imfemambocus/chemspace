@@ -1,6 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { fetchMolecule, type Molecule } from './data/molecule'
 import { fetchProperties, type Properties } from './data/properties'
+import { cidFromUrl, compoundPath } from './url'
 import { Loader } from './components/Loader'
 import { Header } from './components/Header'
 import { Formula } from './components/Formula'
@@ -15,15 +16,6 @@ const StructureViewer = lazy(() =>
 )
 
 type Status = 'loading' | 'ready' | 'error'
-
-const DEFAULT_CID = 177785841 // the C10H14N2 compound
-
-// Read the CID from a shareable ?cid= link so a pasted URL opens that molecule.
-function initialCid(): number {
-  const param = new URLSearchParams(window.location.search).get('cid')
-  const n = param ? Number.parseInt(param, 10) : Number.NaN
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_CID
-}
 
 // Holds the structure card's frame (border, toolbar bar, canvas min-heights) while the
 // lazy 3D chunk streams in, so the grid row doesn't reflow when the viewer mounts.
@@ -61,7 +53,7 @@ function CompoundTitle({
 }
 
 export default function App() {
-  const [cid, setCid] = useState(initialCid)
+  const [cid, setCid] = useState(cidFromUrl)
   const [molecule, setMolecule] = useState<Molecule | null>(null)
   const [props, setProps] = useState<Properties | null>(null)
   const [status, setStatus] = useState<Status>('loading')
@@ -97,13 +89,26 @@ export default function App() {
     return () => controller.abort()
   }, [cid])
 
-  // Keep the URL in sync so the current compound is always shareable. replaceState
-  // avoids piling a history entry onto every example-chip click.
+  // Keep the URL in sync so the current compound is always shareable, and so Back walks
+  // through the compounds visited. The first run replaces instead of pushing: the entry URL
+  // may be a bare / or a legacy ?cid= link, which should be normalized in place rather than
+  // stacked behind a history entry the user never navigated from.
+  const urlSynced = useRef(false)
   useEffect(() => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('cid', String(cid))
-    window.history.replaceState(null, '', url)
+    const path = compoundPath(cid)
+    if (path !== window.location.pathname) {
+      if (urlSynced.current) window.history.pushState(null, '', path)
+      else window.history.replaceState(null, '', path)
+    }
+    urlSynced.current = true
   }, [cid])
+
+  // Back / forward moves between compounds, so follow whatever the popped URL points at.
+  useEffect(() => {
+    const onPopState = () => setCid(cidFromUrl())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
 
   const loading = status === 'loading'
 

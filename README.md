@@ -26,8 +26,9 @@ core group's monthly idea-sharing meeting, one small increment at a time.
   art, in the same dark theme as the 3D model (no white sheet), so compounds with no 3D conformer
   still look at home.
 - **Search however you think of it.** Type a compound name, a SMILES string, or a bare PubChem CID;
-  it resolves to the right compound. Every molecule also has a shareable link (`?cid=2519`) that
-  opens straight to it.
+  it resolves to the right compound. Every molecule has a shareable link of its own
+  (`/compound/2519`) that opens straight to it, and Back walks you through the compounds you have
+  looked at.
 - **Ball-and-stick or space-filling.** Toggle between the two classic representations. Bonds fade
   out in space-filling mode, where they would just be noise.
 - **Hover to identify, click to measure.** Point at any atom or bond to see what it is; flip on
@@ -59,7 +60,8 @@ There is no database and no build-time data step. Everything is fetched live fro
   missing a value still renders fine.
 
 Calls go through a small proxy so the browser talks to PubChem same-origin and sidesteps CORS: the
-Vite dev server provides one in development, and the Docker image does the same with nginx.
+Vite dev server provides one in development, the Docker image does the same with nginx, and a
+rewrite in `vercel.json` covers the deployed build.
 
 Performance is a feature here, not an afterthought. The heavy 3D (three.js and friends) is
 code-split out of the initial load, so the page text paints immediately and the viewer streams in
@@ -96,9 +98,15 @@ docker compose up -d --build
 Then open `http://localhost:8090`. The image builds the app and serves it with nginx, which also
 proxies PubChem for you, so it behaves like the dev server without needing anything else installed.
 
-Heads-up: the app reaches PubChem through a proxy so the browser stays same-origin. Both the dev
-server and the Docker image ship with one; only a hand-rolled static deploy (just the built files on
-a CDN) would need its own proxy or a CORS-friendly data host.
+### Or deploy it
+
+It deploys as a plain static Vite build. Vercel needs no setup beyond importing the repo: the
+`vercel.json` at the root already carries the PubChem rewrite, the single-page fallback that makes
+`/compound/2519` links work, and the asset caching rules.
+
+Heads-up: the app reaches PubChem through a proxy so the browser stays same-origin. The dev server,
+the Docker image, and the Vercel config each ship with one; any other host needs its own, or the
+compound requests come back as the app's own HTML and every lookup fails to load.
 
 ## Tech
 
