@@ -1,14 +1,8 @@
-<p align="center">
-  <img src=".github/banner.svg" alt="ChemSpace" width="100%">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-2dd4bf?style=flat-square&labelColor=0a0a0a&logo=react&logoColor=2dd4bf" alt="React 19">
-  <img src="https://img.shields.io/badge/three.js-r185-2dd4bf?style=flat-square&labelColor=0a0a0a&logo=three.js&logoColor=2dd4bf" alt="three.js">
-  <img src="https://img.shields.io/badge/Vite-8-2dd4bf?style=flat-square&labelColor=0a0a0a&logo=vite&logoColor=2dd4bf" alt="Vite">
-</p>
-
-# ChemSpace
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/banner-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset=".github/banner-light.png">
+  <img src=".github/banner-dark.png" alt="ChemSpace: real 3D molecular structures, straight from a PubChem CID." width="100%">
+</picture>
 
 Search for a compound and ChemSpace shows you the molecule the way it actually sits in space: an
 interactive 3D ball-and-stick model you can orbit, spin, and inflate into a space-filling blob,
