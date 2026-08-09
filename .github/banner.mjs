@@ -7,9 +7,8 @@ import { fileURLToPath } from 'node:url'
  * builds the readme banner, one file per theme. writes a self-contained banner.html and
  * screenshots it twice with puppeteer.
  *
- * png rather than svg: github will not load a webfont for an svg in a readme, and the
- * bloom around the atoms is a real filter rather than something flat shapes can fake.
- * the type is the app's own system stack, so nothing has to be embedded.
+ * png rather than svg: github will not load a webfont for an svg in a readme. the type is
+ * the app's own system stack, so nothing has to be embedded.
  *
  *   npm install --no-save puppeteer && node .github/banner.mjs
  */
@@ -28,7 +27,8 @@ const page = `<!doctype html>
     --fg: #ededed;
     --muted: #8a8a8a;
     --accent: #2dd4bf;
-    --atom: #ededed;
+    --bond: #3a3a3a;
+    --node: #6b6b6b;
   }
 
   html[data-theme='light'] {
@@ -36,7 +36,8 @@ const page = `<!doctype html>
     --fg: #171717;
     --muted: #6b7280;
     --accent: #14b8a6;
-    --atom: #262626;
+    --bond: #d8d8d4;
+    --node: #a3a3a0;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -89,42 +90,32 @@ const page = `<!doctype html>
 
   <div class="motif">
     <svg viewBox="0 0 430 240" fill="none" aria-hidden="true">
-      <defs>
-        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.18"/>
-          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-        </radialGradient>
-        <filter id="bloom" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="4" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-
-      <ellipse cx="215" cy="120" rx="190" ry="118" fill="url(#glow)"/>
-
-      <g stroke="var(--accent)" stroke-width="5" stroke-linecap="round">
-        <line x1="215" y1="66" x2="262" y2="93"/>
-        <line x1="262" y1="93" x2="262" y2="147"/>
-        <line x1="262" y1="147" x2="215" y2="174"/>
-        <line x1="215" y1="174" x2="168" y2="147"/>
-        <line x1="168" y1="147" x2="168" y2="93"/>
-        <line x1="168" y1="93" x2="215" y2="66"/>
-        <line x1="215" y1="66" x2="215" y2="31"/>
-        <line x1="262" y1="147" x2="301" y2="169"/>
-        <line x1="168" y1="147" x2="129" y2="169"/>
+      <g stroke="var(--bond)" stroke-width="2">
+        <path d="M215 62 L262 89 L262 143 L215 170 L168 143 L168 89 Z"/>
+        <path d="M215 62 V27"/>
+        <path d="M262 143 L301 165"/>
+        <path d="M168 143 L129 165"/>
       </g>
 
-      <g filter="url(#bloom)">
-        <circle cx="215" cy="66" r="9" fill="var(--atom)"/>
-        <circle cx="262" cy="93" r="9" fill="var(--atom)"/>
-        <circle cx="262" cy="147" r="9" fill="var(--atom)"/>
-        <circle cx="215" cy="174" r="9" fill="var(--atom)"/>
-        <circle cx="168" cy="147" r="9" fill="var(--atom)"/>
-        <circle cx="168" cy="93" r="9" fill="var(--atom)"/>
-        <circle cx="215" cy="31" r="11" fill="#ff4d4d"/>
-        <circle cx="301" cy="169" r="10.5" fill="#5b7bff"/>
-        <circle cx="129" cy="169" r="11" fill="var(--accent)"/>
+      <!-- inner lines on alternating edges, the way an aromatic ring is drawn -->
+      <g stroke="var(--bond)" stroke-width="2">
+        <path d="M255 96 V136"/>
+        <path d="M211 71 L175 92"/>
+        <path d="M212 161 L176 140"/>
       </g>
+
+      <g fill="var(--bg)" stroke="var(--node)" stroke-width="2">
+        <circle cx="215" cy="62" r="6"/>
+        <circle cx="262" cy="89" r="6"/>
+        <circle cx="262" cy="143" r="6"/>
+        <circle cx="215" cy="170" r="6"/>
+        <circle cx="168" cy="143" r="6"/>
+        <circle cx="168" cy="89" r="6"/>
+        <circle cx="301" cy="165" r="6"/>
+        <circle cx="129" cy="165" r="6"/>
+      </g>
+
+      <circle cx="215" cy="27" r="7" fill="var(--accent)"/>
     </svg>
   </div>
 </body></html>

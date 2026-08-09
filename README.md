@@ -4,6 +4,8 @@
   <img src=".github/banner-dark.png" alt="ChemSpace: real 3D molecular structures, straight from a PubChem CID." width="100%">
 </picture>
 
+## About
+
 Search for a compound and ChemSpace shows you the molecule the way it actually sits in space: an
 interactive 3D ball-and-stick model you can orbit, spin, and inflate into a space-filling blob,
 wrapped in a dark compound-detail page with its identifiers and a little visual readout of its
