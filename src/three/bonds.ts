@@ -12,24 +12,21 @@ export interface BondInstance {
 
 const Y = new THREE.Vector3(0, 1, 0)
 
-// Rendered multiplicity of a bond: only doubles and triples get parallel cylinders;
-// everything else (single, aromatic, unknown) draws as one.
+// aromatic and unknown draw as a single line, the same as an actual single bond
 function renderedOrder(order: number): 1 | 2 | 3 {
   if (order === 2) return 2
   if (order === 3) return 3
   return 1
 }
 
-// Perpendicular offsets, one per cylinder, that space a multi-bond's parallel lines.
 function bondOffsets(order: 1 | 2 | 3, sep: number): number[] {
   if (order === 2) return [-sep / 2, sep / 2]
   if (order === 3) return [-sep, 0, sep]
   return [0]
 }
 
-// Turn each chemical bond into one or more cylinder instances. Every bond is split
-// into two half-cylinders colored by the two atoms it connects (the classic
-// ball-and-stick look), and double/triple bonds become parallel offset cylinders.
+// every bond becomes two half-cylinders, each carrying the colour of the atom at its end.
+// that split is the classic ball-and-stick look
 export function buildBondInstances(mol: Molecule): BondInstance[] {
   const out: BondInstance[] = []
   const va = new THREE.Vector3()
@@ -53,8 +50,7 @@ export function buildBondInstances(mol: Molecule): BondInstance[] {
 
     const quaternion = new THREE.Quaternion().setFromUnitVectors(Y, dir)
 
-    // A perpendicular to offset multi-bond cylinders along; any vector not parallel
-    // to the bond works as a seed.
+    // any vector not parallel to the bond works as the seed for this perpendicular
     seed.set(Math.abs(dir.x) > 0.9 ? 0 : 1, Math.abs(dir.x) > 0.9 ? 1 : 0, 0)
     perp.crossVectors(dir, seed).normalize()
 
@@ -70,14 +66,14 @@ export function buildBondInstances(mol: Molecule): BondInstance[] {
       const oy = perp.y * off
       const oz = perp.z * off
 
-      // Half nearest A: centered a quarter of the way along the bond.
+      // half nearest A, centred a quarter along
       const pa = va.clone().addScaledVector(dir, fullLen * 0.25)
       pa.x += ox
       pa.y += oy
       pa.z += oz
       out.push({ position: pa, quaternion: quaternion.clone(), length: halfLen, color: colA, bond: bi })
 
-      // Half nearest B: centered three-quarters along.
+      // and B, three-quarters along
       const pb = va.clone().addScaledVector(dir, fullLen * 0.75)
       pb.x += ox
       pb.y += oy

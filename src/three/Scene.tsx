@@ -6,9 +6,8 @@ import type { Molecule as Mol } from '../data/molecule'
 import { Molecule } from './Molecule'
 import { useStore } from '../store'
 
-// Under frameloop="demand" the auto-rotate has no permanent loop to run in, so while spin
-// is on we request a frame every tick (which lets drei's OrbitControls advance autoRotate);
-// the effect kicks the first frame when spin flips on. Idle-when-not-spinning stays at ~0.
+// under frameloop="demand" the auto-rotate has no permanent loop to run in. asking for a frame
+// every tick is what lets drei's OrbitControls advance it; the effect kicks the first one
 function SpinDriver({ spin }: Readonly<{ spin: boolean }>) {
   const invalidate = useThree((s) => s.invalidate)
   useFrame(() => {
@@ -27,8 +26,7 @@ export function Scene({ molecule }: Readonly<{ molecule: Mol | null }>) {
     <>
       <SpinDriver spin={spin} />
 
-      {/* Transparent canvas: the card behind it provides the background gradient. */}
-      {/* Key light, cool fill, and a soft ambient so nothing goes fully black. */}
+      {/* the canvas is transparent. the card behind it paints the background gradient */}
       <ambientLight intensity={0.55} />
       <directionalLight position={[6, 10, 8]} intensity={2.2} />
       <directionalLight position={[-8, -4, -6]} intensity={0.5} color="#88aaff" />
@@ -43,14 +41,11 @@ export function Scene({ molecule }: Readonly<{ molecule: Mol | null }>) {
         maxDistance={200}
       />
 
-      {/* Keyed by CID so each molecule mounts fresh with correctly-sized instance buffers. */}
+      {/* keyed by CID: a fresh mount is what sizes the instance buffers correctly */}
       {molecule && <Molecule key={molecule.cid} molecule={molecule} />}
 
-      {/* Postprocessing: N8AO adds contact shadows in the crevices between atoms so the
-          ball-and-stick reads with real depth, and a threshold-gated bloom gives only the
-          bright specular highlights a soft glow. multisampling keeps edges antialiased,
-          since the composer bypasses the canvas's own MSAA. Coordinates are in Angstrom,
-          so the AO radius is sized to atom/bond spacing (~1-2 A). */}
+      {/* multisampling here because the composer bypasses the canvas's own MSAA. coordinates
+          are in Angstrom, so the AO radius is sized to atom and bond spacing (~1-2 A) */}
       <EffectComposer multisampling={4} enableNormalPass={false}>
         <N8AO aoRadius={1.6} intensity={2.2} distanceFalloff={1} halfRes />
         <Bloom

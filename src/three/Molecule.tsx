@@ -10,20 +10,17 @@ import { buildBondInstances } from './bonds'
 import { measure } from './measure'
 import { useStore } from '../store'
 
-// matches --color-accent in index.css; the single accent used for interactive highlights
+// mirrors --color-accent in index.css; three cannot read the custom property
 const ACCENT = '#2dd4bf'
 const Y = new THREE.Vector3(0, 1, 0)
 
-// Sphere tessellation for the atom instances, dialed down as the atom count climbs. Small
-// molecules stay crisp; busy ones trade a little smoothness for far fewer vertices. It is one
-// draw call either way, but the vertex/fragment cost still scales with segments squared.
+// one draw call either way, but vertex and fragment cost still scale with segments squared
 function atomSegments(atomCount: number): number {
   if (atomCount <= 40) return 24
   if (atomCount <= 120) return 16
   return 12
 }
 
-// A picked object under the pointer: an atom by its index, or a bond by its index.
 type Hover = { kind: 'atom'; index: number } | { kind: 'bond'; index: number } | null
 
 function orderName(order: number): string {
@@ -37,7 +34,6 @@ function bondName(mol: Mol, i: number): string {
   return `${mol.atoms[b.a].el}${b.a + 1}-${mol.atoms[b.b].el}${b.b + 1} · ${orderName(b.order)}`
 }
 
-// Position/orientation of a full-length cylinder spanning atoms A and B.
 function bondTransform(A: Atom, B: Atom) {
   const a = new THREE.Vector3(A.x, A.y, A.z)
   const b = new THREE.Vector3(B.x, B.y, B.z)
@@ -50,9 +46,8 @@ function bondTransform(A: Atom, B: Atom) {
   }
 }
 
-// One InstancedMesh for all atoms and one for all bonds, so a whole molecule is two
-// draw calls regardless of atom count. Molecules are small, so this is trivially fast;
-// the instancing is really about keeping the door open for larger structures later.
+// one InstancedMesh for every atom and one for every bond: two draw calls per molecule,
+// whatever the atom count. small molecules do not need it. larger structures will
 export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
   const style = useStore((s) => s.style)
   const measuring = useStore((s) => s.measure)
@@ -73,19 +68,17 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
 
   const bondInstances = useMemo(() => buildBondInstances(molecule), [molecule])
 
-  // recreated only on molecule change; args changes rebuild the sphere geometry
+  // molecule-scoped: a change to args rebuilds the sphere geometry
   const segments = useMemo(() => atomSegments(molecule.atoms.length), [molecule])
 
-  // atom radius for the current render style, reused by the highlight overlays
   const atomRadius = (el: string) => (style === 'spacefill' ? vdwRadius(el) : ballRadius(el))
 
-  // A stale selection would point at the previous molecule's atoms, so reset on change.
+  // a selection kept across a change would point at the previous molecule's atoms
   useEffect(() => {
     clearSelection()
     setHover(null)
   }, [molecule, clearSelection])
 
-  // Pointer cursor over pickable atoms while measuring.
   useEffect(() => {
     gl.domElement.style.cursor = measuring && hover?.kind === 'atom' ? 'pointer' : ''
     return () => {
@@ -93,7 +86,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     }
   }, [gl, measuring, hover])
 
-  // Write instance matrices and colors whenever the molecule or render style changes.
   useLayoutEffect(() => {
     const dummy = new THREE.Object3D()
     const color = new THREE.Color()
@@ -120,17 +112,15 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
       bondsRef.current.setMatrixAt(i, dummy.matrix)
       bondsRef.current.setColorAt(i, color.set(b.color))
     }
-    // Bonds are meaningless in a space-filling view, so hide them by zeroing the count.
+    // bonds are meaningless in a space-filling view. zero the count to hide them
     bondsRef.current.count = style === 'spacefill' ? 0 : bondInstances.length
     bondsRef.current.instanceMatrix.needsUpdate = true
     if (bondsRef.current.instanceColor) bondsRef.current.instanceColor.needsUpdate = true
-    // These imperative buffer writes bypass the reconciler, so request a frame ourselves
-    // for the molecule swap and the ball-and-stick / space-filling toggle to repaint.
+    // these buffer writes bypass the reconciler; nothing else asks for the repaint
     invalidate()
   }, [molecule, style, bondInstances, invalidate])
 
-  // Scale-in reveal, once per molecule. Kept separate from the camera fit so it does
-  // not re-fire when `controls` becomes available on the very first load.
+  // separate from the camera fit below, or it re-fires when `controls` arrives on first load
   useLayoutEffect(() => {
     gsap.fromTo(
       groupRef.current.scale,
@@ -139,9 +129,8 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     )
   }, [molecule, invalidate])
 
-  // Frame the camera to the molecule's bounding radius.
   useLayoutEffect(() => {
-    // Distance at which the bounding sphere fits the vertical field of view, with margin.
+    // the distance at which the bounding sphere fits the vertical fov, with margin
     const fov = (camera.fov * Math.PI) / 180
     const dist = (molecule.radius / Math.sin(fov / 2)) * 1.5
     const to = new THREE.Vector3(0.4, 0.3, 1).normalize().multiplyScalar(dist)
@@ -165,7 +154,7 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     }
   }, [molecule, camera, controls, invalidate])
 
-  // Atom picking: hover to identify (always on), click to select (only while measuring).
+  // hover identifies at any time; the click only picks while measuring
   const onAtomMove = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
     const i = e.instanceId
@@ -179,7 +168,7 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     if (e.instanceId != null) pickAtom(e.instanceId)
   }
 
-  // Bond hover maps the picked half-cylinder instance back to its chemical bond.
+  // a picked half-cylinder instance has to map back to the chemical bond it belongs to
   const onBondMove = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
     const inst = e.instanceId
@@ -190,7 +179,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
   }
   const onBondOut = () => setHover((h) => (h?.kind === 'bond' ? null : h))
 
-  // Hover highlight geometry, derived from the current hover target.
   const hoverAtom = hover?.kind === 'atom' ? molecule.atoms[hover.index] : null
   const hoverBond =
     hover?.kind === 'bond' && style !== 'spacefill' ? molecule.bonds[hover.index] : null
@@ -198,7 +186,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
     ? bondTransform(molecule.atoms[hoverBond.a], molecule.atoms[hoverBond.b])
     : null
 
-  // Measurement overlay: the polyline through the picked atoms and its value label.
   const selPoints = useMemo(
     () => selection.map((i) => new THREE.Vector3(molecule.atoms[i].x, molecule.atoms[i].y, molecule.atoms[i].z)),
     [selection, molecule],
@@ -230,7 +217,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
         <meshStandardMaterial roughness={0.5} metalness={0.05} />
       </instancedMesh>
 
-      {/* Hover: translucent accent shell over the atom, plus an identifying tooltip. */}
       {hoverAtom && (
         <>
           <mesh position={[hoverAtom.x, hoverAtom.y, hoverAtom.z]}>
@@ -241,7 +227,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
         </>
       )}
 
-      {/* Hover: accent sleeve over the bond cylinder, plus a "C1-N2 · single" tooltip. */}
       {hoverBond && hoverBondT && (
         <>
           <mesh position={hoverBondT.position} quaternion={hoverBondT.quaternion} scale={[1, hoverBondT.length, 1]}>
@@ -252,7 +237,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
         </>
       )}
 
-      {/* Measurement: mark each picked atom, connect them, and label the value. */}
       {selPoints.map((p, i) => (
         <mesh key={`${selection[i]}`} position={p}>
           <sphereGeometry args={[atomRadius(molecule.atoms[selection[i]].el) * 1.25, 20, 20]} />
@@ -273,7 +257,6 @@ export function Molecule({ molecule }: Readonly<{ molecule: Mol }>) {
   )
 }
 
-// Small screen-space label anchored to a point in the scene, lifted clear of the atom.
 function Tooltip({ position, text }: Readonly<{ position: THREE.Vector3 | [number, number, number]; text: string }>) {
   return (
     <Html position={position} center style={{ pointerEvents: 'none' }}>
