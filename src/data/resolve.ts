@@ -1,6 +1,5 @@
-// Resolves a free-text search query into a PubChem CID. The query can be a bare CID,
-// a compound name ("caffeine"), or a SMILES string; names are the common case and
-// SMILES is the structural fallback.
+// A query is a bare CID, a compound name ("caffeine"), or a SMILES string. Names are the
+// common case; SMILES is the structural fallback.
 //   name-to-CID:   /rest/pug/compound/name/<q>/cids/JSON
 //   smiles-to-CID: /rest/pug/compound/smiles/<q>/cids/JSON
 

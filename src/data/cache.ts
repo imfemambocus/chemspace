@@ -1,8 +1,7 @@
-// A tiny read-through cache keyed by string. An in-memory Map serves instant revisits
-// within a session; sessionStorage backs it so a reload is still fast. PubChem structure
-// and property data is effectively static, so entries live for the whole session with no
-// expiry. sessionStorage access is wrapped: private mode or quota can throw, and the
-// memory tier still works on its own.
+// Two tiers: an in-memory Map for revisits within a session, sessionStorage behind it so a
+// reload is still fast. No expiry, since PubChem structure and property data is static.
+// Every sessionStorage call is wrapped. Private mode and quota both throw, and the memory
+// tier works on its own.
 
 const memory = new Map<string, unknown>()
 

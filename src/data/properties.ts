@@ -1,7 +1,6 @@
-// Compound identifiers and computed descriptors from PubChem's PUG REST property
-// endpoint. These populate the "Structural information" panel and the 3D property
-// radar. Note: PubChem renamed the SMILES property (IsomericSMILES -> SMILES) in a
-// 2025 API change, so we try the new name and fall back to the old one.
+// Compound identifiers and computed descriptors from PubChem's PUG REST property endpoint.
+// PubChem renamed the SMILES property in a 2025 API change: `SMILES` is the current name and
+// `IsomericSMILES` the fallback.
 
 import { readCache, writeCache } from './cache'
 
@@ -76,8 +75,7 @@ export async function fetchProperties(cid: number, signal?: AbortSignal): Promis
   const hit = readCache<Properties>(key)
   if (hit) return hit
 
-  // Try the current SMILES property name, fall back to the pre-2025 one. Skip the
-  // fallback if the request was aborted (superseded by a newer search).
+  // an aborted request is a superseded search, not a wrong property name: do not retry it
   let props: Properties
   try {
     props = await request(cid, 'SMILES', signal)
@@ -89,8 +87,8 @@ export async function fetchProperties(cid: number, signal?: AbortSignal): Promis
   return props
 }
 
-// Descriptors for the radar, each normalized against a typical small-molecule range
-// so the bars are comparable. `norm` drives bar height; `display` is the real value.
+// Each descriptor is normalized against a typical small-molecule range, which is what makes
+// the axes comparable. `norm` drives the shape; `display` is the real value.
 export interface Descriptor {
   key: string
   label: string
@@ -133,11 +131,11 @@ export function descriptors(p: Properties): Descriptor[] {
   ]
 }
 
-// Druglikeness read straight off the descriptors above, no extra request. Lipinski's Rule
-// of Five and Veber are exact, well-known threshold rules. QED (Bickerton et al. 2012) is
-// approximate here: PubChem's property endpoint does not expose the aromatic-ring and
-// structural-alert counts that two of QED's eight terms need, so we compute the weighted
-// QED over the six descriptors we do have and flag it "QED*" in the UI.
+// Druglikeness read straight off the descriptors above, no extra request. Lipinski's Rule of
+// Five and Veber are exact threshold rules. QED (Bickerton et al. 2012) is approximate here.
+// PubChem's property endpoint exposes neither the aromatic-ring nor the structural-alert count,
+// and two of QED's eight terms need them: the weighted QED over the remaining six is what the
+// UI shows, flagged "QED*".
 
 export interface Criterion {
   label: string // e.g. "MW ≤ 500"

@@ -47,8 +47,7 @@ export function vdwRadius(el: string): number {
   return info(el).vdw
 }
 
-// A few nice-looking, reliably-3D compounds for the quick-pick chips, starting with
-// the example CID from the meeting.
+// quick-pick chips: compounds that look good and reliably have a 3D conformer
 export interface Example {
   cid: number
   name: string

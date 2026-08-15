@@ -1,6 +1,5 @@
-// Fetches a compound's 3D structure from PubChem and parses the MOL/SDF (V2000) text
-// into atoms and bonds. PubChem's PUG REST returns an SDF with 3D coordinates via
-// record_type=3d; if a compound has no 3D conformer we fall back to the flat 2D layout.
+// PubChem's PUG REST serves 3D coordinates as an SDF under record_type=3d. Not every compound
+// has a 3D conformer; the flat 2D layout is the fallback for those.
 
 import { readCache, writeCache } from './cache'
 
@@ -39,8 +38,7 @@ export async function fetchMolecule(cid: number, signal?: AbortSignal): Promise<
   const hit = readCache<Molecule>(key)
   if (hit) return hit
 
-  // Prefer the real 3D conformer; fall back to the 2D depiction laid flat. A superseded
-  // request aborts, so don't fire the 2D fallback after the caller cancelled.
+  // an abort is the caller cancelling, not a missing conformer: do not fire the 2D fallback
   let mol: Molecule
   try {
     mol = await load(cid, '3d', signal)
@@ -52,10 +50,8 @@ export async function fetchMolecule(cid: number, signal?: AbortSignal): Promise<
   return mol
 }
 
-// Fetch just the flat 2D layout for a CID (record_type=2d), cached separately from the
-// primary 3D-preferred fetch. The 2D depiction needs real layout coordinates even for
-// compounds that do have a 3D conformer: projecting their 3D coords to 2D would overlap
-// atoms, so we always pull PubChem's dedicated 2D drawing here.
+// the depiction needs real layout coordinates even where a 3D conformer exists. projecting the
+// 3D coordinates flat overlaps atoms, so this always pulls PubChem's own 2D drawing
 export async function fetchMolecule2D(cid: number, signal?: AbortSignal): Promise<Molecule> {
   const key = `mol2d:${cid}`
   const hit = readCache<Molecule>(key)
@@ -99,8 +95,7 @@ export function parseSDF(sdf: string, cid: number, is3D: boolean): Molecule {
     })
   }
 
-  // Center on the centroid so the molecule orbits about the origin, and record the
-  // bounding radius for camera framing.
+  // centred on the centroid, which is what makes the molecule orbit about the origin
   let cx = 0
   let cy = 0
   let cz = 0
