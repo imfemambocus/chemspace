@@ -6,18 +6,15 @@ interface Props {
   molecule: Molecule
 }
 
-// Neutral outline stroke for bonds, so the drawing reads as line art rather than
-// PubChem's black-on-white sheet. Atom symbols keep their CPK color for the pop.
+// neutral, not black: the drawing has to read as line art, not as PubChem's white sheet.
+// only the atom symbols carry CPK colour
 const BOND_STROKE = 'rgba(212, 212, 212, 0.85)'
 
-// A lightweight 2D structural depiction drawn as inline SVG straight from the molecule's
-// flat layout coordinates. Carbons stay implicit (unlabeled); heteroatoms get a CPK-colored
-// symbol. There is no background, so the drawing floats on the same dark canvas as the 3D
-// model. All sizes derive from the average bond length, so the SVG scales to any molecule.
+// Inline SVG from the molecule's flat layout coordinates. Carbons stay implicit and every
+// size derives from the mean bond length, which is what lets one frame fit any molecule.
 export function Depiction2D({ molecule }: Readonly<Props>) {
   const geom = useMemo(() => build(molecule), [molecule])
-  // a <title> (named via aria-labelledby) gives the inline SVG an accessible name without
-  // the role="img" that some AT/devices handle inconsistently
+  // a <title> plus aria-labelledby names the svg. role="img" is handled inconsistently by AT
   const titleId = useId()
 
   return (
@@ -74,11 +71,8 @@ interface Label {
   color: string
 }
 
-// Turn the molecule's 2D coordinates into ready-to-render SVG segments and labels. Works
-// in screen space (y flipped, since SDF y points up and SVG y points down) and derives all
-// sizing from the mean bond length so any molecule fills its frame consistently.
 function build(mol: Molecule) {
-  // screen-space atom positions (y flipped)
+  // SDF y points up and SVG y points down, hence the flip
   const pts = mol.atoms.map((a) => ({ x: a.x, y: -a.y }))
 
   const avg = meanBondLength(pts, mol)
@@ -97,7 +91,7 @@ function build(mol: Molecule) {
     labeled[i] ? [{ atom: i, x: pts[i].x, y: pts[i].y, el: a.el, color: cpkColor(a.el) }] : [],
   )
 
-  // frame the drawing with a margin so labels near the edge are not clipped
+  // a margin, or the labels nearest the edge clip
   const xs = pts.map((p) => p.x)
   const ys = pts.map((p) => p.y)
   const pad = avg + font
@@ -109,9 +103,7 @@ function build(mol: Molecule) {
   return { segments, labels, stroke, font, viewBox: `${minX} ${minY} ${w} ${h}` }
 }
 
-// The 1-3 parallel line segments that draw one bond (single, double, or triple), each ends
-// trimmed back from a labeled atom so the symbol has clear air. IDs are keyed off the atom
-// pair so react keys stay stable without leaning on array position.
+// ids come off the atom pair, never the array position: react keys have to survive a rebuild
 function bondSegments(
   b: Bond,
   pts: { x: number; y: number }[],

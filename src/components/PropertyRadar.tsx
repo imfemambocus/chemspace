@@ -1,26 +1,20 @@
 import { useId, useMemo } from 'react'
 import type { Descriptor } from '../data/properties'
 
-// SVG radar (spider) chart of the computed descriptors: a single translucent area whose
-// vertices sit at each axis's normalized value, with an opaque border and small vertex
-// dots, over a faint concentric-ring web. Single accent hue, a direct label at each axis
-// so the chart needs no legend. Replaces the old WebGL radar to drop the second canvas /
-// render loop; the value list beside it is the accessible view. `play` gates the reveal so
-// the area holds until the first-load splash clears. The reveal is a CSS animation (see
-// `.radar-shape` in index.css), so this component pulls in no animation library and GSAP
-// stays out of the entry chunk.
+// Plain SVG, and the reveal is a CSS animation (`.radar-shape` in index.css) rather than a
+// tween. This component renders eagerly, so an animation library here would land GSAP in the
+// entry chunk. One direct label per axis, which is what saves it a legend.
 
 const ACCENT = '#2dd4bf'
 const MAX_R = 84 // radius of the outermost (norm = 1) ring
 const LABEL_R = 106 // label ring, outside the area
 const RINGS = [0.25, 0.5, 0.75, 1]
 
-// Polar to cartesian, measured from straight up and going clockwise (SVG y points down).
+// from straight up, clockwise. SVG y points down
 function polar(angle: number, r: number) {
   return { x: Math.sin(angle) * r, y: -Math.cos(angle) * r }
 }
 
-// Horizontal text anchor for a label, by the side of the center it sits on.
 function labelAnchor(x: number): 'middle' | 'start' | 'end' {
   if (Math.abs(x) < 1) return 'middle'
   if (x > 0) return 'start'
@@ -31,8 +25,7 @@ export function PropertyRadar({
   descriptors,
   play,
 }: Readonly<{ descriptors: Descriptor[]; play: boolean }>) {
-  // a <title> (named via aria-labelledby) gives the inline SVG an accessible name without the
-  // role="img" that some AT/devices handle inconsistently; the value list beside it is the detail
+  // named by <title> and aria-labelledby, not role="img". the value list beside it is the detail
   const titleId = useId()
 
   const placed = useMemo(() => {
@@ -57,7 +50,6 @@ export function PropertyRadar({
       aria-labelledby={titleId}
     >
       <title id={titleId}>Property radar of computed molecular descriptors</title>
-      {/* Radar web: faint concentric magnitude rings plus one spoke per axis. */}
       {RINGS.map((f) => (
         <circle key={f} r={f * MAX_R} fill="none" stroke="#ffffff" strokeOpacity={0.08} strokeWidth={1} />
       ))}
@@ -74,9 +66,7 @@ export function PropertyRadar({
         />
       ))}
 
-      {/* Value area: translucent fill, opaque-ish border, dots at each vertex. Revealed by a
-          CSS scale-up from the chart center once the splash clears (`play`); keyed on the point
-          set so switching compound remounts the group and replays the grow. */}
+      {/* keyed on the point set: switching compound has to remount the group and replay the grow */}
       <g key={points} className={play ? 'radar-shape radar-play' : 'radar-shape'}>
         <polygon
           points={points}
@@ -92,7 +82,6 @@ export function PropertyRadar({
         ))}
       </g>
 
-      {/* Direct labels at each axis: the short name over the value. */}
       {placed.map((p) => {
         const anchor = labelAnchor(p.label.x)
         return (

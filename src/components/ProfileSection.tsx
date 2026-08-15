@@ -2,9 +2,6 @@ import type { Properties, Rule } from '../data/properties'
 import { descriptors, druglikeness } from '../data/properties'
 import { PropertyRadar } from './PropertyRadar'
 
-// The "Profile" section: descriptor and druglikeness text first, then the bordered blocks - a
-// radar chart paired with the value list (the accessible table view), and below them the
-// Lipinski and Veber druglikeness rule cards as two equal columns.
 export function ProfileSection({
   props,
   loading,
@@ -21,8 +18,8 @@ export function ProfileSection({
         bars are comparable. Heights are relative; exact values are listed alongside.
       </p>
 
-      {/* Radar + value list. The column template mirrors the info | structure grid up top, so the
-          radar lines up with the structure card and the value list with the info panel. */}
+      {/* the column template mirrors the info | structure grid above: the radar lands under the
+          structure card and the value list under the info panel */}
       <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
         <div
           className="relative h-80 overflow-hidden rounded-xl border border-white/10 lg:h-95"
@@ -35,7 +32,6 @@ export function ProfileSection({
           )}
         </div>
 
-        {/* Value list / table view */}
         <div className="rounded-xl border border-white/10 bg-neutral-950/60 p-5">
           <dl className="space-y-3.5">
             {(data.length ? data : placeholder).map((d) => (
@@ -50,8 +46,7 @@ export function ProfileSection({
                 <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
                   <div
                     className="h-full rounded-full bg-accent transition-[width] duration-500"
-                    // hold at zero until the splash clears so the fill isn't seen animating
-                    // behind the fading overlay; then it grows in with the radar
+                    // zero until the splash clears, or the fill animates behind the fading overlay
                     style={{ width: splashDone ? `${Math.round(d.norm * 100)}%` : '0%' }}
                   />
                 </div>
@@ -61,7 +56,6 @@ export function ProfileSection({
         </div>
       </div>
 
-      {/* QED* / druglikeness intro, sitting between the two rows of cards. */}
       {drug && (
         <p className="mt-8 text-sm text-neutral-500">
           {drug.qed != null ? (
@@ -77,7 +71,6 @@ export function ProfileSection({
         </p>
       )}
 
-      {/* Druglikeness rule cards: two equal columns, same gap as the radar / value grid. */}
       {drug && (
         <div className="mt-4 grid gap-6 sm:grid-cols-2">
           {drug.rules.map((r) => (
@@ -89,7 +82,6 @@ export function ProfileSection({
   )
 }
 
-// One druglikeness rule as its own bordered card: name + verdict, then the pass/fail criteria.
 function RuleCard({ rule }: Readonly<{ rule: Rule }>) {
   return (
     <div className="rounded-xl border border-white/10 bg-neutral-950/60 p-5">
@@ -115,8 +107,7 @@ function RuleCard({ rule }: Readonly<{ rule: Rule }>) {
   )
 }
 
-// Pass in the accent (good/active), fail in amber (the palette's caution colour, as used by
-// the "2D layout" badge); "Partial" when a descriptor a criterion needs was missing.
+// "Partial" means a descriptor one of the criteria needs was missing, not that the rule failed
 function Verdict({ pass, complete }: Readonly<{ pass: boolean; complete: boolean }>) {
   const base = 'rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide'
   if (!complete) {
@@ -129,8 +120,6 @@ function Verdict({ pass, complete }: Readonly<{ pass: boolean; complete: boolean
   )
 }
 
-// Shared placeholder for the radar cell: shown while descriptors load, while the WebGL
-// chunk streams in, or when a compound has no descriptors.
 function RadarFallback({ label }: Readonly<{ label: string }>) {
   return (
     <div className="absolute inset-0 flex items-center justify-center">

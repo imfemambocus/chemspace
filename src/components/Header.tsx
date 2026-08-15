@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { EXAMPLES } from '../data/elements'
 import { resolveCid } from '../data/resolve'
 
-// Sticky top bar: wordmark, compound search, and example quick-picks. The search
-// accepts a name, SMILES, or bare CID and resolves it to a CID before loading.
 export function Header({ cid, onLoadCid }: Readonly<{ cid: number; onLoadCid: (cid: number) => void }>) {
   const [input, setInput] = useState('')
   const [resolving, setResolving] = useState(false)

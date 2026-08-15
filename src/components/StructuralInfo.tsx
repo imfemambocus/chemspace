@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import type { Properties } from '../data/properties'
 import { Formula } from './Formula'
 
-// The left-hand identifier panel, mirroring PubChemLite's "Structural information".
 export function StructuralInfo({ props, loading }: Readonly<{ props: Properties | null; loading: boolean }>) {
   return (
     <div className="rounded-xl border border-white/10 bg-neutral-950/60 p-5">

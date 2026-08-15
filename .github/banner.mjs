@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url'
  * builds the readme banner, one file per theme. writes a self-contained banner.html and
  * screenshots it twice with puppeteer.
  *
- * png rather than svg: github will not load a webfont for an svg in a readme. the type is
- * the app's own system stack, so nothing has to be embedded.
+ * png rather than svg: github will not load a webfont for an svg in a readme. the type here is
+ * the app's own system stack, so there is nothing to embed.
  *
  *   npm install --no-save puppeteer && node .github/banner.mjs
  */
@@ -21,7 +21,7 @@ const H = 360
 const page = `<!doctype html>
 <html data-theme="dark"><head><meta charset="utf-8">
 <style>
-  /* the app's own tokens, so the banner cannot drift from the site */
+  /* copied from the app's own tokens. the banner has to stay the same colour as the site */
   html[data-theme='dark'] {
     --bg: #0a0a0a;
     --fg: #ededed;

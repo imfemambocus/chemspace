@@ -8,17 +8,15 @@ import { Formula } from './components/Formula'
 import { StructuralInfo } from './components/StructuralInfo'
 import { ProfileSection } from './components/ProfileSection'
 
-// The 3D viewer pulls in three.js, drei and postprocessing, so keep it out of the entry
-// chunk: it renders immediately (import kicks off on mount, in parallel with the fetch),
-// but text-first paint never waits on three.js. A placeholder holds the card's frame.
+// three.js, drei and postprocessing all arrive with this one. the import starts on mount, in
+// parallel with the fetch, but the text paints without waiting on any of it
 const StructureViewer = lazy(() =>
   import('./components/StructureViewer').then((m) => ({ default: m.StructureViewer })),
 )
 
 type Status = 'loading' | 'ready' | 'error'
 
-// Holds the structure card's frame (border, toolbar bar, canvas min-heights) while the
-// lazy 3D chunk streams in, so the grid row doesn't reflow when the viewer mounts.
+// the card's frame, held while the 3D chunk streams in. without it the grid row reflows on mount
 function ViewerFallback() {
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
@@ -58,21 +56,20 @@ export default function App() {
   const [props, setProps] = useState<Properties | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState('')
-  // Flips once the first-load splash clears, so the Profile radar holds its grow-in until
-  // it is actually visible. Stable callback so Loader doesn't re-signal on every render.
+  // the Profile radar holds its grow-in until the splash clears and it is actually visible
   const [splashDone, setSplashDone] = useState(false)
   const onSplashDone = useCallback(() => setSplashDone(true), [])
 
   useEffect(() => {
-    // One controller both cancels the in-flight requests when the CID changes (a new
-    // search supersedes the old one) and guards against a stale response setting state.
+    // one controller does both jobs: cancel the superseded requests, and block a stale
+    // response from writing state behind the newer one
     const controller = new AbortController()
     const { signal } = controller
     setStatus('loading')
     setError('')
 
-    // The structure is required; properties are best-effort so a compound without
-    // some descriptors still renders.
+    // the structure is required. properties are best-effort, and a compound missing some
+    // descriptors still renders
     Promise.all([fetchMolecule(cid, signal), fetchProperties(cid, signal).catch(() => null)])
       .then(([m, p]) => {
         if (signal.aborted) return
@@ -89,10 +86,8 @@ export default function App() {
     return () => controller.abort()
   }, [cid])
 
-  // Keep the URL in sync so the current compound is always shareable, and so Back walks
-  // through the compounds visited. The first run replaces instead of pushing: the entry URL
-  // may be a bare / or a legacy ?cid= link, which should be normalized in place rather than
-  // stacked behind a history entry the user never navigated from.
+  // the first run replaces rather than pushes. an entry URL of `/` or `?cid=` is normalized in
+  // place: pushing would stack it behind a history entry nobody navigated from
   const urlSynced = useRef(false)
   useEffect(() => {
     const path = compoundPath(cid)
@@ -103,7 +98,7 @@ export default function App() {
     urlSynced.current = true
   }, [cid])
 
-  // Back / forward moves between compounds, so follow whatever the popped URL points at.
+  // back and forward move between compounds; follow whatever the popped URL points at
   useEffect(() => {
     const onPopState = () => setCid(cidFromUrl())
     window.addEventListener('popstate', onPopState)
@@ -128,7 +123,6 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Title block */}
             <div>
               <a
                 href={`https://pubchem.ncbi.nlm.nih.gov/compound/${cid}`}

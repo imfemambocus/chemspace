@@ -1,6 +1,4 @@
-// The ball-and-stick logo mark: three atoms bonded to an accent core that assemble, then spin
-// forever. Shared by the first-load splash (with the wordmark) and the 2D-image loading state
-// (mark only). The animation lives in index.css under the .loader-* classes.
+// the assemble-then-spin animation is the .loader-* classes in index.css, not anything here
 export function LogoMark({ size = 96 }: Readonly<{ size?: number }>) {
   return (
     <svg viewBox="0 0 120 120" width={size} height={size} className="loader-mol">

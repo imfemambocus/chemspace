@@ -2,8 +2,8 @@ import { create } from 'zustand'
 
 export type RenderStyle = 'ballstick' | 'spacefill'
 
-// View options shared between the HUD (which toggles them) and the 3D scene (which
-// reads them). Molecule data and fetch status live as local state in App instead.
+// only the view options the HUD toggles and the scene reads. molecule data and fetch status
+// stay as local state in App
 interface State {
   style: RenderStyle
   spin: boolean

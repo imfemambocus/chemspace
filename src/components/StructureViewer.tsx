@@ -15,25 +15,20 @@ interface Props {
   cid: number
 }
 
-// Which structure representation is showing: the interactive 3D model, or a flat 2D depiction
-// we draw as SVG from PubChem's 2D layout coordinates. 2D needs only the CID, so it works even
-// for compounds with no 3D conformer, where we would otherwise be worse than PubChemLite.
+// the 2D view needs only the CID. it is what covers the compounds with no 3D conformer
 type View = '3d' | '2d'
 
-// Hold the assembling logo up for at least this long so its full animation plays before the
-// 2D depiction replaces it, even when the data is cached (skipped under reduced motion).
+// long enough for the logo's assemble animation to finish, even on cached data
 const MIN_2D_LOADER_MS = 900
 
 export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
   const [view, setView] = useState<View>('3d')
-  // the loaded 2D layout to draw, and the CID it is for
   const [mol2d, setMol2d] = useState<Molecule | null>(null)
-  // the CID whose 2D depiction is revealed; while it lags behind `cid` the logo mark spins
+  // while this lags behind `cid`, the logo mark spins
   const [loadedCid, setLoadedCid] = useState<number | null>(null)
   const loadStart = useRef(0)
   const loaderTimer = useRef<number | null>(null)
-  // CIDs whose 2D layout has already been fetched this session, so toggling back does not replay
-  // the loader for data that is now cached
+  // fetched this session already: toggling back must not replay the loader over cached data
   const loadedOnce = useRef<Set<number>>(new Set())
   const style = useStore((s) => s.style)
   const setStyle = useStore((s) => s.setStyle)
@@ -44,11 +39,9 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
   const selection = useStore((s) => s.selection)
   const clearSelection = useStore((s) => s.clearSelection)
 
-  // The live measurement doubles as the accessible, non-3D readout of the picked atoms.
+  // this doubles as the accessible, non-3D readout of the picked atoms
   const result = molecule && selection.length >= 2 ? measure(molecule.atoms, selection) : null
 
-  // Fetch and reveal the 2D layout when the 2D view is active. A superseded CID aborts. The
-  // logo mark spins until reveal; a CID already fetched this session skips the loader minimum.
   useEffect(() => {
     if (view !== '2d') return
     const controller = new AbortController()
@@ -62,8 +55,7 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
         reveal(cid, cached)
       })
       .catch(() => {
-        // on failure just clear the loader so it does not spin forever; without mol2d the
-        // depiction simply does not render for this CID
+        // clear the loader rather than spin forever. without mol2d nothing draws for this CID
         if (!controller.signal.aborted) reveal(cid, cached)
       })
 
@@ -73,8 +65,6 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
     }
   }, [cid, view])
 
-  // Reveal the 2D depiction, but not before the loader's minimum has elapsed. A cached CID
-  // (already seen this session) skips the wait entirely.
   const reveal = (c: number, cached: boolean) => {
     if (cached) {
       setLoadedCid(c)
@@ -89,13 +79,11 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
-      {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
         <span className="text-xs uppercase tracking-wider text-neutral-500">Structure</span>
         <div className="flex items-center gap-2">
-          {/* Ball&stick / space-filling, measure and spin only apply to the 3D model. The
-              3D/2D toggle sits last so it stays pinned to the right edge and does not shift
-              when these 3D-only controls appear or disappear. */}
+          {/* the 3D/2D toggle is last, pinned to the right edge. it must not shift when these
+              3D-only controls appear and disappear */}
           {view === '3d' && (
             <>
               {molecule && !molecule.is3D && (
@@ -131,7 +119,6 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
               >
                 Spin
               </button>
-              {/* divider between the 3D-only controls and the 3D/2D toggle */}
               <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
             </>
           )}
@@ -146,15 +133,12 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
         </div>
       </div>
 
-      {/* Canvas */}
       <div
         className="relative flex-1 min-h-75 sm:min-h-105 lg:min-h-120"
         style={{ background: 'radial-gradient(circle at 50% 35%, #151515, #0a0a0a 70%)' }}
       >
         {view === '2d' ? (
-          // Our own 2D depiction, drawn as SVG line art from PubChem's 2D layout coordinates
-          // (Depiction2D) so it floats on the same dark canvas as the 3D model instead of a
-          // white sheet. The spinning logo mark holds the space until it loads, then it fades in.
+          // our own line art rather than PubChem's PNG: it floats on the dark canvas, not a white sheet
           <div className="absolute inset-0 flex items-center justify-center p-6">
             {loadedCid !== cid && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -173,13 +157,11 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
           </div>
         ) : (
           <>
-            {/* Absolutely positioned so the canvas never feeds its rendered height back into
-                the flex/grid sizing; the container height stays driven by content and resets
-                per compound instead of sticking at the tallest one seen. */}
+            {/* absolute, always. in normal flow the canvas feeds its rendered height back into
+                the grid minimum and the row sticks at the tallest compound seen */}
             <Canvas
-              // On-demand rendering: an idle molecule costs ~0 GPU/CPU. Everything that changes
-              // per frame requests one explicitly (spin driver, GSAP onUpdate, instance writes);
-              // drag/zoom and hover/measure overlays already invalidate via drei/the reconciler.
+              // an idle molecule costs ~0 GPU/CPU. anything that changes per frame has to ask for
+              // one: the spin driver, GSAP onUpdate, the instance writes
               frameloop="demand"
               camera={{ position: [0, 0, 30], fov: 45, near: 0.1, far: 1000 }}
               dpr={[1, 2]}
@@ -190,7 +172,6 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
               <Scene molecule={molecule} />
             </Canvas>
 
-            {/* Measurement readout: the live value, and the accessible view of what's picked. */}
             {molecule && !loading && measuring && (
               <div className="absolute left-3 top-3 max-w-60 rounded-lg border border-white/10 bg-neutral-900/85 px-3 py-2 text-xs backdrop-blur">
                 <div className="flex items-center justify-between gap-3">
@@ -222,7 +203,6 @@ export function StructureViewer({ molecule, loading, cid }: Readonly<Props>) {
               </div>
             )}
 
-            {/* Element legend */}
             {molecule && !loading && (
               <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1">
                 {uniqueElements(molecule).map(({ el, count }) => (
